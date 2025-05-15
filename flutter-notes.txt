@@ -1,0 +1,57 @@
+We need to install Bracket Pair Color DLW, Flutter tree, Dart and Flutter extension for Visual Studio Code.
+
+To crate a project we need to use the following command in the terminal:
+
+flutter create project_name
+
+The project name should be in snake_case.
+
+To run the project cd into the project directory and use the following command:
+flutter run
+This will show the options, choose the relevant option and the project will run.
+
+After creating a project inside the lib folder we create a new dart file and start writing code.
+
+To create a stateless widget we type the st keyword which will generate the boilerplate code for a stateless widget.
+
+We modify the class name. We need to return the Scaffold() widget to display a static page/screen.
+
+Inside the Scaffold() we add the appBar and body property.
+
+Inisde body we add the child property which is the widget that we want to display on the screen.
+
+The following is an example for a stateless widget
+import 'package:flutter/material.dart';
+
+class Page1 extends StatelessWidget {
+  const Page1({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+        appBar: AppBar(
+          backgroundColor:const  Color.fromARGB(255, 120, 200, 120),
+          title: const Text("My First Page",
+              style: TextStyle(
+                  fontFamily: 'Montserrat',
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold)),
+              centerTitle: true,
+              leading: IconButton(onPressed: (){}, color: Colors.red, icon : const Icon(Icons.person_2_outlined))
+        ),
+        body: SafeArea(
+            child: Column(
+          children: [
+            TextButton(onPressed: () {}, child: const Text("Button 1"))
+          ],
+        )));
+  }
+}
+
+There are two types of Buttons in Flutter, TextButton and ElevatedButton.
+IconButton is used to display an icon on the appBar.
+
+We can add actions and leading in the appBar to add actions to the appBar.
+The leading property is used to display an icon on the left side of the appBar.
+The actions property is used to display actions on the right side of the appBar.
+The actions is a list which we can other widgets like TextButton or IconButton.
