@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:sample_project/card_view.dart';
+import 'package:sample_project/display_colors_and_images.dart';
+import 'package:sample_project/full_view_image.dart';
 import 'package:sample_project/page1.dart';
 import 'package:sample_project/page2.dart';
+import 'package:sample_project/page3.dart';
 
 void main() {
   runApp(const MyApp());
@@ -36,7 +40,11 @@ class MyApp extends StatelessWidget {
       ),
       // home: const MyHomePage(title: 'Flutter Demo Home Page'),
       // home: Page1(),
-      home: Page2(),
+      // home: Page2(),
+      // home: Page3(),`
+      // home: FullViewImage(),
+      // home: ColorsAndImages(),
+      home: CardView(),
     );
   }
 }

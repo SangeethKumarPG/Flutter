@@ -32,7 +32,7 @@ class Page1 extends StatelessWidget {
             ElevatedButton(
               onPressed: () {},
               child: const Text("elevated button"),
-              style: ElevatedButton.styleFrom(
+              style: ElevatedButton.styleFrom( 
                   elevation: 20,
                   foregroundColor: Colors.white,
                   backgroundColor: Colors.cyan,

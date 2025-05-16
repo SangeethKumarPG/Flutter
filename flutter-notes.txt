@@ -55,3 +55,19 @@ We can add actions and leading in the appBar to add actions to the appBar.
 The leading property is used to display an icon on the left side of the appBar.
 The actions property is used to display actions on the right side of the appBar.
 The actions is a list which we can other widgets like TextButton or IconButton.
+To make the debug icon disapper in the appBar we can set the debugShowCheckedModeBanner to false in the MaterialApp widget in main.dart file.
+
+To add images to the project first we need to go to the pubspec.yaml file and add uncomment the assets section.
+NOTE that you should not adjust the space of the contents in the pubspec.yaml file.
+
+Then create an assets folder in the root of the project and add the images to the assets folder.
+
+To use the images in the project we can use the following code:
+Image(
+  image:AssetImage('assets/image_name.png')
+  // optionally adjust the width and height of the image
+  ,width: 200,
+   height: 200,
+)
+
+
