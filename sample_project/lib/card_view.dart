@@ -33,7 +33,7 @@ class CardView extends StatelessWidget {
       'description': 'sample description5',
       'image': 'assets/image5.jpeg',
       'price': '\$500',
-    }
+    }  
   ];
 
   @override
