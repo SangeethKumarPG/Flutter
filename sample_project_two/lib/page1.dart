@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sample_project_two/calculator.dart';
 import 'package:sample_project_two/counter_app.dart';
 import 'package:sample_project_two/datatransfer_from.dart';
+import 'package:sample_project_two/employee_data.dart';
 import 'package:sample_project_two/form_validation.dart';
 import 'package:sample_project_two/multiplication_table.dart';
 import 'package:sample_project_two/radio_button.dart';
@@ -10,7 +11,7 @@ import 'package:sample_project_two/text_field_styled.dart';
 
 class Page1 extends StatelessWidget {
   const Page1({super.key});
-  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -109,15 +110,13 @@ class Page1 extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Sample Project Two'),
         centerTitle: true,
-        leading: Builder(
-          builder: (context) {
-            return IconButton(
-                onPressed: () {
-                  Scaffold.of(context).openDrawer();
-                },
-                icon: const Icon(Icons.menu));
-          }
-        ),
+        leading: Builder(builder: (context) {
+          return IconButton(
+              onPressed: () {
+                Scaffold.of(context).openDrawer();
+              },
+              icon: const Icon(Icons.menu));
+        }),
       ),
       drawer: Drawer(
         child: ListView(
@@ -158,7 +157,9 @@ class Page1 extends StatelessWidget {
             _buildListTile(context,
                 icon: Icons.text_fields_rounded,
                 title: "Text Fields",
-                page: const MyTextField())
+                page: const MyTextField()),
+            _buildListTile(context,
+                icon: Icons.api, title: "API Get", page: const EmployeeData())
           ],
         ),
       ),
