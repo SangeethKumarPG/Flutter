@@ -490,3 +490,627 @@ This is still not an optimal approach because Every time when we click on the bu
 ```
 
 We can also define the object outside of the class because anyways it will get executed and we only need it once. 
+
+We can easily style buttons using the `ButtonClassName.styleFrom()` method. For outlined button we can use `OutlinedButton.styleFrom()` . Eg: 
+
+```javaScript
+OutlinedButton(onPressed: (){},
+          style:OutlinedButton.styleFrom(
+            foregroundColor: Colors.white,
+          ),
+          child: const Text('Start Quiz'))
+```
+
+You can create a icon button using the `.icon()` constructor. We can use the same properties of the button but we need to use the `label` argument instead of child argument for adding the text. To add an icon we can use the **Icon** widget which is provided by flutter. We can use the Icon widget anywhere inside of the flutter project. It needs iconData argument. We can use predefined icons from flutter using **Icons** class. eg:
+
+```javaScript
+OutlinedButton.icon(
+            onPressed: () {},
+ 
+            style: OutlinedButton.styleFrom(foregroundColor: Colors.white),
+            icon: const Icon(Icons.arrow_right_alt),
+            label: const Text('Start Quiz'),
+          )
+```
+
+We can create a transparent background to the image by wrapping it with the `Opacity` widget. **We should specify the opacity which takes a value between 0.0 and 1.0\. Where 0.0 is completely opaque and 1.0 is completely transparent.** Eg:
+
+```javaScript
+Opacity(
+            opacity: 0.6,
+            child: Image.asset('assets/images/quiz-logo.png', width: 300),
+          )
+```
+
+This approach is not recommended because it is less performant. 
+
+The Image widget already has a `color `attribute which adds an **overlay** color to the image. We can use `Colors.fromARGB()` method add a color and adjust the alpha value to add transparency. eg:
+
+```javaScript
+Image.asset(
+            'assets/images/quiz-logo.png',
+            width: 300,
+            color: const Color.fromARGB(150, 255, 255, 255),
+          ),
+```
+
+To create the quiz app we need to send the render screens conditionally and navigation from one scree to another screen. For this we need to create 2 custom stateful widgets. A Quiz widget and a Questions widget. The Quiz widget should return a MaterialApp widget which was in the main.dart. Then call the Quiz widget inside of the `runApp()`. The main.dart file will now look like:
+
+```javaScript
+import 'package:advanced_basics/quiz.dart';
+import 'package:flutter/material.dart';
+ 
+void main() {
+  runApp(
+    const Quiz(),
+  );
+}
+```
+
+And the Quiz.dart file will look like:
+
+```javaScript
+import 'package:flutter/material.dart';
+import 'package:advanced_basics/start_screen.dart';
+ 
+class Quiz extends StatefulWidget{
+  const Quiz({super.key});
+ 
+  @override 
+  State<Quiz> createState(){
+    return _QuizState();
+  }
+}
+```
+
+```javaScript
+class _QuizState extends State<Quiz>{
+  @override
+  Widget build(context){
+    return MaterialApp(
+      home: Scaffold(
+        backgroundColor: Color.fromARGB(255, 63, 5, 120),
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Color.fromARGB(255, 95, 49, 173),
+                Color.fromARGB(255, 93, 61, 147),
+              ],
+              begin: AlignmentGeometry.topLeft,
+              end: AlignmentGeometry.bottomRight,
+            ),
+          ),
+          child: StartScreen(),
+        ),
+      ),
+    );
+  }
+}
+```
+
+To enable navigation between screens we need to know about 2 main concepts.
+
+1\. Rendering content conditionally: We can store widgets in variables. For example we can store a widget like:
+
+`var activeScreen = const StartScreen();  
+`But when changing the activeScreen value to something like:
+
+```javaScript
+void switchScreen(){
+    setState(() {
+      activeScreen = QuestionsScreen();
+    });
+  }
+```
+
+Will not work. Because when we first initialize the activeScreen as StartScreen, it will also assign the type to StartScreen. To avoid this problem we can use :
+
+`Widget activeScreen = const StartScreen();  
+`This will fix the issue of type mismatch.  
+When we use the setState() method inside of a class which extends state, it will reexecute the build method. After this it will compare the results of this with the previous execution and apply only the necessary changes to the screen.
+
+2\. Lifting state up: In our current scenario we have the Start Quiz button which is in the start screen. 
+
+when clicking on the button the screen should change to QuestionsScreen. So we have 2 widgets that should work with the same data. The solution is to lift the state up. i.e, we can move the state inside of a shared parent widget like the Quiz widget we can define the state and methods to manipulate the state we can conveniently move between widgets to render content conditionally. **NOTE:** The child widget need access to both the state and the method to manipulate the state. Also when we pass methods as arguments to a widget we must not specify the parenthesis () .  
+In the child widget we must specify the argument in the constructor. The type of this should be a function. Since the type of our switchScreen function is void we should also specify that. 
+
+```javaScript
+  const StartScreen(void Function() startQuiz,{super.key});
+```
+
+The Function is a special type in dart. **Note the () at the end of Function**.. If there are argument we should specify them in between the ().
+
+We must also accept the argument to a variable inorder to use it inside of the class. For this we can use the shortcut method like:
+
+```javaScript
+  const StartScreen(this.startQuiz,{super.key});
+  final void Function() startQuiz;
+```
+
+This avoids defining the type inside of constructor but we must define the type when accepting it into a final variable. To call this function inside of our button's onPressed argument, we can create an anonymous function to call this method or pass the pointer directly as argument. 
+
+```javaScript
+class _QuizState extends State<Quiz>{
+  Widget activeScreen = StartScreen(switchScreen);
+  void switchScreen(){
+    setState(() {
+      activeScreen = QuestionsScreen();
+    });
+  }
+```
+
+There is still a problem with the above code because the switchScreen method is passed before definition of the function. To get around this we can override the `initState()` method of the State class. This method can be used to do some extra initialization work when the state is created for the first time. 
+
+initState() will execute once the object of the class has been created. It will never execute twice. This is useful for some general initialization work. The first line of this method should be `super.initState()`   
+The class will now look like:
+
+```javaScript
+class _QuizState extends State<Quiz>{
+  Widget? activeScreen;
+ 
+  @override
+  void initState() {
+    super.initState();
+    activeScreen = StartScreen(switchScreen);
+  }
+  void switchScreen(){
+    setState(() {
+      activeScreen = QuestionsScreen();
+    });
+  }
+  @override
+  Widget build(context){
+    .......
+}
+```
+
+**NOTE:** The use of ? when declaring the activeScreen object. We use ? to indicate that the object may be null.
+
+Every Flutter Widget has a built-in **lifecycle**: A collection of methods that are **automatically executed** by Flutter (at certain points of time).
+
+There are **three** extremely important (stateful) widget lifecycle methods you should be aware of:
+
+* `initState()`: Executed by Flutter when the StatefulWidget's State object is **initialized**
+* `build()`: Executed by Flutter when the Widget is built for the **first time** AND after `setState()` was called
+* `dispose()`: Executed by Flutter right before the Widget will be **deleted** (e.g., because it was displayed conditionally)
+
+Alternatively we can render conditionally by using the ternary expression, thus removing the need for using the initState function. Instead of storing the actual screen in the variable, we could store a string like :
+
+`var activeScreen = 'start-screen';`   
+In the switchScreens method we can set the activeScreen variable to something like: 'questions-screen'. Since we are initializing a string we don't need to use initState method. The code will look like:
+
+```javaScript
+  var activeScreen = 'start-screen';
+  void switchScreen(){
+    setState(() {
+      activeScreen = 'questions-screen';
+    });
+  }
+```
+
+We can use the ternary operator like:
+
+```javaScript
+ child:  activeScreen == 'start-screen'? StartScreen(switchScreen) : QuestionsScreen(),
+```
+
+This is a bit more cleaner and requires less code.
+
+Using the ternary operator can also make the code harder to read. Alternatively, we can use if statement inside of the build method. We can define a variable inside of the build method, like:
+
+```javaScript
+    Widget screenWidget = StartScreen(switchScreen);
+    if(activeScreen == 'questions-screen'){
+      screenWidget = QuestionsScreen();
+    }
+```
+
+For the widget we can pass like:   
+`child: screenWidget,  
+`The entire build method will look like:
+
+```javaScript
+Widget build(context){
+    Widget screenWidget = StartScreen(switchScreen);
+    if(activeScreen == 'questions-screen'){
+      screenWidget = QuestionsScreen();
+    }
+    return MaterialApp(
+          ....
+          child:  screenWidget,
+        ),
+      ),
+    );
+  }
+```
+
+you may also use `if` inside of lists to conditionally add items to lists:
+
+```javaScript
+final myList = [  1,  2,  if (condition)    3];
+```
+
+In this example, the number `3` will only be added to `myList` if `condition` was met (`condition` can be `true` or `false` or a check that yields `true` or `false` \- e.g., `day == 'Sunday'`).
+
+Please note that there are **NO curly braces** around the `if` statement body. The `if` statement body also only comprises the next line of code (i.e., you can't have multiple lines of code inside the `if` statement).
+
+You can also specify an `else` case - an alternative value that may be inserted into the list if `condition` is not met:
+
+```javaScript
+final myList = [  1,  2,  if (condition)    3  else    4];
+```
+
+  
+Using this feature is optional. Alternatively, you could, for example, also work with a ternary expression:
+
+```javaScript
+final myList = [  1,  2,  condition ? 3 : 4];
+```
+
+Especially when inserting more complex values (e.g., a widget with multiple parameters being set) into a more complex list (e.g., a list of widgets passed to a `Column()` or `Row()`), this feature can lead to more readable code.
+
+To store the questions and answers we can create a class in a new file inside the models folder inside of lib. This is not a widget but a blueprint for the question data structure. We can create a class with question text and answer options like:
+
+```javaScript
+class QuizQuestion {
+  const QuizQuestion(this.text, this.answers);
+  final String text;
+  final List<String> answers;
+}
+```
+
+Then we can create an additional helper file to store the data by calling the constructor of this class. It will look like:
+
+```javaScript
+import 'package:advanced_basics/models/quiz_question.dart';
+const questions =[
+  QuizQuestion('What are the main building blocks of flutter UIs?', [
+    'Widgets',
+    'Components',
+    'Blocks',
+    'Functions',
+  ]),
+];
+```
+
+It is assumed that the right answer is the first option. When providing the options to the users we will shuffle the options and display it to the users so that it will not be predictable.
+
+**NOTE**: To make sure that a component takes up maximum available screen space, we can wrap them up in Center as we learned from earlier. Alternatively, we can use `SizedBox()` to wrap everything and define the width and height as `double.infinity` , which takes up the maximum available space. Then for the column we can specify the `mainAxisAlignment `argument for the column we can set it into center by using `MainAxisAlignment.center` . By using this approach we can use mainAxisAlignment attribute to align the components.   
+Now the example class will look like:
+
+```javaScript
+class _QuestionsScreenState extends State<QuestionsScreen> {
+  @override
+  Widget build(context) {
+    return SizedBox(
+      width: double.infinity,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children:  [
+          Text('Question'),
+          SizedBox(height:30),
+          ElevatedButton(onPressed: (){}, child: Text("Answer 1", )),
+          ElevatedButton(onPressed: (){}, child: Text("Answer 1", )),
+          ElevatedButton(onPressed: (){}, child: Text("Answer 1", )),
+          ElevatedButton(onPressed: (){}, child: Text("Answer 1", )),
+        ]
+      ),
+    );
+  }
+}
+```
+
+We have 4 buttons for the 4 options. We can style them individually, but it is a good idea to create a reusable button widget. We can use the `shape` attribute of inside the button style from constructor to define the border shape of the button. We use the RoundedRectangleBorder() constructor inside which we specify the borderRadius argument which accepts a BorderRadius object.   
+To add padding to the buttons we can use the padding argument similarly. This accepts a EdgeInsets object. We can use various constructors of this class to set padding in different ways, we can use the symmetric constructor to set the horizontal and vertical padding separately. The class will now look like:
+
+```javaScript
+class AnswerButton extends StatelessWidget {
+  const AnswerButton({
+    super.key,
+    required this.answerText,
+    required this.onTap,
+  });
+ 
+  final String answerText;
+  final void Function() onTap;
+  @override
+  Widget build(context) {
+    return ElevatedButton(onPressed: onTap, 
+    style: ElevatedButton.styleFrom(
+      backgroundColor: const Color.fromARGB(255, 76, 16, 87),
+      foregroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(40),
+      ),
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 40),
+    )
+    ,child: Text(answerText));
+  }
+}
+```
+
+We can access items from the list like accessing the elements from the array. For example if we have a list like:
+
+```javaScript
+const hobbies = ['cooking', 'reading'];
+print(hobbies[0]); //will print 'cooking'
+```
+
+If we specify an index that does not exist we will get an error. 
+
+  
+Lists has a wide variety of methods that can be called on them. map() method allows us transform the values of the list to other values. It takes function as argument. The function will be executed for each list item. The function will also get the list item as an argument. The function in the map should return an item which was based on the old item of the existing list. This will not change the original item of the list. We can use the map method to list of answers. So we can use like:
+
+```javaScript
+          currentQuestion.answers.map((answer){
+            return AnswerButton(answerText: answer, onTap: (){},);
+          }),
+```
+
+But this will not work because this returns an iterable. The children argument of flutter widgets should be widgets not list of widgets. We need to spread this list so that individual widgets are returned from the list. This can be done by using the spread operator, i.e. `...` . In our case we can use:
+
+```javaScript
+...currentQuestion.answers.map((answer){
+            return AnswerButton(answerText: answer, onTap: (){},);
+          }),
+```
+
+  
+To stretch the widgets correctly across the screen we can use `crossAxisAlignment` argument for the column widget to `CrossAxisAlignment.stretch` . This will fill the items with entire screen width, we can fix this by adding a padding or margin around the column. The column does not have a margin, so we need to wrap the column with a Container widget.   
+**NOTE:** If we need to center the text, we should use the `textAlign` property of the `Text()` widget, we should not use it inside TextStyle. The widgets will now look like:
+
+```javaScript
+Container(
+        margin: const EdgeInsets.all(40),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(currentQuestion.text, style: TextStyle(color: Colors.white), textAlign: TextAlign.center,),
+            SizedBox(height: 30),
+            ...currentQuestion.answers.map((answer) {
+              return AnswerButton(answerText: answer, onTap: () {});
+            }),
+          ],
+        ),
+      )
+```
+
+List also has a `shuffle()` method which can be called on a list. But this changes the original list. So we need to copy the list before shuffling because we have stored the correct answer in the first index. To perform this we can create a function inside of the QuizQuestions class. List is also a class in dart so we can access methods in this class using . operator. We can use `List.of()` method to create a new list based on the passed list. We can create new list and shuffle the list by chaining methods together. This is possible in dart.   
+`List.of(answers).shuffle();`   
+is perfectly valid in dart. But the problem here is that the shuffle will not return a value. It just shuffles the data in place.
+
+```javaScript
+  List<String> getShuffledAnswers() {
+    final List<String> copyOfAnswers = List.of(answers);
+    copyOfAnswers.shuffle();
+    return copyOfAnswers;
+  }
+```
+
+This will work fine. In the above case you might wonder that we performed the shuffle on a list declared as final. 
+
+note that final will only prevent re-assignment. We are performing this operations in memory so this will not re-assign. We can call the above method in our questions screen like:
+
+```javaScript
+...currentQuestion.getShuffledAnswers().map((answer) {
+              return AnswerButton(answerText: answer, onTap: () {});
+            }),
+```
+
+The next step is to change the question once the current question is answered. We can do this managing the question index in a state. We also need a way to increment the question index. 
+
+```javaScript
+  var currentQuestionIndex = 0;
+  void answerQuestion(){
+    setState(() {
+      currentQuestionIndex++;
+    });
+  }
+```
+
+And in the build method we can pass this function to the button's onpressed. like:
+
+```javaScript
+children: [
+            Text(currentQuestion.text, style: TextStyle(color: Colors.white), textAlign: TextAlign.center,),
+            SizedBox(height: 30),
+            ...currentQuestion.getShuffledAnswers().map((answer) {
+              return AnswerButton(answerText: answer, onTap: answerQuestion);
+            }),
+          ]
+```
+
+We can add google fonts to our flutter project by installing the google fonts package. The command is:  
+`flutter pub add google_fonts`   
+This will automatically add the dependency in pubspec.yaml file. To use the fonts we need to import the google\_fonts dart file in the file which you want to use the font.
+
+`import 'package:google_fonts/google_fonts.dart';` 
+
+In the style attribute of text widget we must pass the property as `GoogleFonts` . Under this there are various methods corresponding to various font families that we can use. Eg:
+
+```javaScript
+            Text(currentQuestion.text, style:  GoogleFonts.lato(
+              color: const Color.fromARGB(255, 87, 152, 237),
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            ), textAlign: TextAlign.center,)
+```
+
+The next step is to store the answers and navigate to the results screen once we exhausted the number of questions. Also we need to store the chosen answers. This can be maintained as a state in the Quiz widget. We can define an empty list of strings to store selected answers. The list has build-in method called `.add()` which lets you add new items, this happens in memory without re-assignment. We can create a function that takes in the answer and add it into the variable which maintains the selected answers. We define this function inside of the Quiz widget and pass the function as argument to the question screen.
+
+We can use the widget object in a class which extends the State class. By using this object we can access the variables and methods defined in the class. For example we have an `onSelectedAnswer()`function in 
+
+```javaScript
+class QuestionsScreen extends StatefulWidget {
+  const QuestionsScreen({super.key, required this.onSelectedAnswer});
+ 
+  final void Function(String answer) onSelectedAnswer;
+  @override
+  State<QuestionsScreen> createState() {
+    return _QuestionsScreenState();
+  }
+}
+```
+
+To access this inside of `_QuestionsScreen` class we can use:  
+` widget.onSelectedAnswer('...');`   
+After this we can modify the `answerQuestion()` method to accept the selected answer. This can be done by modifying the `onTap` argument of the `AnswerButton` widget.
+
+```javaScript
+return AnswerButton(answerText: answer, onTap: (){
+                answerQuestion(answer);
+              });
+```
+
+The answerQuestion will be like:
+
+```javaScript
+  void answerQuestion(String answer){
+    widget.onSelectedAnswer(answer);
+    setState(() {
+      currentQuestionIndex++;
+    });
+  }
+```
+
+We can check if the user has answered all questions by checking the length of `selectedAnswers` list and questions list. If they are same we can set the `activeScreen` to result screen. We can do this inside of `selectedAnswer()` method. Since we have not yet implemented the result screen we can use navigate back to the start screen for now. Also we need to reset the selectedAnswers list. The method will now look like:
+
+```javaScript
+ void selectedAnswer(String answer){
+    selectedAnswers.add(answer);
+    if(selectedAnswers.length == questions.length){
+      setState(() {
+        selectedAnswers = [];
+        activeScreen = 'start-screen';
+      });
+    }
+  }
+```
+
+**NOTE:** We should change the final from the `selectedAnswers` list so that it can be redefined to empty.
+
+To display the results we can create a stateless result\_screen widget. We can easily pass the chosenAnswers list to the result screen widget.
+
+The next step is to display the summary. We need a Map datatype for this. Map is a data structure which maps values to keys. It is a generic type in dart where we should specify the type of key and the type of value. We can use regular data types in dart or use the Object datatype if you are unsure about the type. Since all dart objects will have the object type.   
+Dart also supports Loops. The syntax is :
+
+```javaScript
+for(helper_variable intialization; condition for loop execution; increment/decrement){
+//body of the loop
+}
+```
+
+We can use the for loop to iterate over the chosen answers and create a summary.  
+We use the `{}` to create a map. In between these we assign the values as key value pairs. We use the `:` symbol to assign data in a map. The `getSummaryData` function will look like:
+
+```javaScript
+  List<Map<String, Object>> getSummaryData(){
+    final List<Map<String, Object>> summary = [];
+    for(var i=0; i<chosenAnswers.length; i++){
+      summary.add(
+        {
+          'question_index': i,
+          'question': questions[i].text,
+          'correct_answer': questions[i].answers[0],
+          'user_answer': chosenAnswers[i],
+        }
+      );
+    }
+    return summary;
+  }
+```
+
+  
+The Row widget is the horizontal equivalent to the column widget. It's main axis is horizontal axis and cross axis is vertical axis. By default it occupies entire available width. We can easily convert an iterable to a list by calling the `.toList()` method. To display the question index we cannot use   
+`data['question_index']+1`   
+Because here the question\_index is stored as object. So adding 1 to this will result in an error so we need to explicitly cast it to integer so that we can get the correct index. To display this on a widget like text widget we again need to cast it to string. We can use :
+
+```javaScript
+          Text(((data['question_index'] as int)+ 1).toString())
+```
+
+We are converting the question\_index to integer and then adding 1 and converting to string.  
+We use the **as** keyword for typecasting in dart. The syntax is:  
+`variable as type`   
+We normally don't need to use typecasting but when we are working with maps which store different types of data we use type casting. 
+
+We can use column widget inside of row widget. The entire Questions Summary widget looks like:
+
+```javaScript
+ Widget build(BuildContext context) {
+    return Column(
+      children: summaryData.map((data){
+        return Row(children: [
+          Text(((data['question_index'] as int)+ 1).toString()),
+          Column(children: [
+            Text(data['question'] as String),
+            SizedBox(height: 5,),
+            Text(data['user_answer'] as String),
+            Text(data['correct_answer'] as String),
+          ],)
+        ],);
+      }).toList(),
+    );
+  }
+```
+
+The Expanded widget is used to take up maximum amount of available width. If we don't use expanded the Column widget will take infinite amount of width and go beyond screen boundaries. **Expanded allows its child to take the available space along the flex widgets main axis.** The maximum width of a row widget is the maximum screen width. The maximum height of the column widget is the height of the screen. So if we use expanded to wrap a column it cannot take more than the available space provided by the parent widget. 
+
+To find the number of correct answers we can use the built-in `where()` method on the summaryData. It is a method provided by dart to filter the list, it does not change the original list. It creates a new list and returns it. It also requires a function as argument which will be executed for each item in the list. We will get the item of list as argument for this function. If the function returns true that item will be added to the new list. If it is false it will be dropped from the new list. Example:
+
+```javaScript
+    final int numCorrectQuestions = summaryData.where((data){
+      return data['user_answer'] == data['correct_answer'];
+    }).length;
+```
+
+To set a fixed height to a widget we can use the SizedBox. But this might content off. We can avoid this problem by using a `SingleChildScrollView`. It makes the child scrollable. eg:
+
+```javaScript
+SingleChildScrollView(
+        child: Column(
+          children: summaryData.map((data){
+            return Row(children: [
+              Text(((data['question_index'] as int)+ 1).toString()),
+              Expanded(
+                child: Column(children: [
+                  Text(data['question'] as String),
+                  SizedBox(height: 5,),
+                  Text(data['user_answer'] as String),
+                  Text(data['correct_answer'] as String),
+                ],),
+              )
+            ],);
+          }).toList(),
+        ),
+      )
+```
+
+* If we add an \_ before the class name, it makes the class private. It means that that class will be accessible only from the file where we defined the class.
+* We can use the underscores to make properties and methods private by adding underscores before their name. We can make the class public and the properties and methods private.
+* Getters are specific methods which lets you access the data. It will not take in any arguments. We can define getters by adding the `get` keyword before the method name.  
+eg:  
+```javaScript  
+ List<Map<String, Object>> get summaryData {  
+    final List<Map<String, Object>> summary = [];  
+    ....  
+    }  
+```  
+When we define like this we don't need to call the summaryData like a method. We can use it like a variable like:  
+`final summary = summaryData;`  
+We can use it like property but internally it behaves like a method.  
+**NOTE:** We should not add parenthesis to getter methods.
+
+* Arrow functions are functions which takes in an input parameter and immediately return the output. For example we had:  
+```javaScript  
+summaryData.where((data) {  
+      return data['user_answer'] == data['correct_answer'];  
+    }).length;  
+```  
+We can change this into:  
+```javaScript  
+summaryData.where((data) => data['user_answer'] == data['correct_answer']).length;  
+```  
+The above shown is the arrow function. Using it is optional, but it makes the code concise and readable.
