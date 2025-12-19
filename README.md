@@ -1114,3 +1114,74 @@ We can change this into:
 summaryData.where((data) => data['user_answer'] == data['correct_answer']).length;  
 ```  
 The above shown is the arrow function. Using it is optional, but it makes the code concise and readable.
+
+When downloading project zip files you should first run   
+`flutter pub get`  
+Then you need to run   
+`flutter create .`  
+inside of the project folder, so that all the relevant folders are created for the platforms for the project.
+
+In the project when we run it works fine until it reaches result screen. In the result screen it will show:  
+`Type String is not subtype of int.`   
+When you restart the quiz and try again you will get :  
+`RangeError (length) : invalid value not in inclusive range.` 
+
+  
+You will get these error messages on screen when you are in development mode. In production if any error occurs it will simply crash. We can analyze these error messages and find the problem. In the debug console of visual studio code we will get more details of the error message including the file name and line number. To launch the debug mode open the `main.dart` file in vscode and on the top right you will se an option to run debug. This will launch the application in debug mode. The error message will be like:
+
+```javaScript
+═══════ Exception caught by widgets library ═══════════════════════════════════
+type 'String' is not a subtype of type 'int' in type cast
+The relevant error-causing widget was:
+ SummaryItem SummaryItem:file:///C:/Users/pgsan/OneDrive/Documents/Flutter/flutter_projects/debugging/lib/questions_summary/questions_summary.dart:18:22
+════════════════════════════════════════════════════════════════════════════════ 
+```
+
+```javaScript
+════════ Exception caught by widgets library ═══════════════════════════════════
+type 'String' is not a subtype of type 'int' in type cast
+The relevant error-causing widget was:
+ SummaryItem SummaryItem:file:///C:/Users/pgsan/OneDrive/Documents/Flutter/flutter_projects/debugging/lib/questions_summary/questions_summary.dart:18:22
+```
+
+The error indicates that the value we are using thinking that it is a integer is actually a string. We can see that the error originated from ` return SummaryItem(data);  
+`of `question_summary.dart` file. This is a constructor of `SummaryItem`. So we can assume that the error is originating from this widget. And we can see that we mistakenly used the `question `index of the map instead of `question_index `so that it is throwing this error.
+
+```javaScript
+QuestionIdentifier(
+            isCorrectAnswer: isCorrectAnswer,
+            questionIndex: itemData['question'] as int,
+          )
+```
+
+This error happened because we specified the value type as Object, due to this the dart will not flag this error when writing the code. It will raise an error only at the runtime when the value is accessed and casted to an unsupported type. 
+
+```javaScript
+════════ Exception caught by widgets library ═══════════════════════════════════
+The following RangeError was thrown building QuestionsScreen(dirty, state: _QuestionsScreenState#892e3):
+RangeError (length): Invalid value: Not in inclusive range 0..5: 6
+The relevant error-causing widget was:
+ QuestionsScreen QuestionsScreen:file:///C:/Users/pgsan/OneDrive/Documents/Flutter/flutter_projects/debugging/lib/quiz.dart:48:22
+```
+
+We don't typically run our application in debug mode because it might slow the application down significantly. We only use this mode to trace out errors in the code. When running the application in debug mode we can use break points. 
+
+We can use the debug mode to see the values stored inside of variables when the program is running. We can right click on properties or variables and click on watch option to see the changes in the values in real time in the watch window. Apart from the watch window there are windows for local variables which tracks the values of the local variables. Call stack shows the methods called behind the scenes. If there is an error in the app, when running in debug mode the execution will be paused on the line where the error occurred even if there is no breakpoint. 
+
+The error we are encountering here is because we never reset the selected answers list when clicking on the restart button. This causes 
+
+```javaScript
+if (_selectedAnswers.length == questions.length) {
+      setState(() {
+        _activeScreen = 'results-screen';
+      });
+    }
+```
+
+This condition to fail and the navigation to the results screen does not happen. So to fix this issue we should rest the selectedAnswers list to empty when clicking on restart quiz button.
+
+**To check the performance of the application we can use the profile mode. We can do this by running the main.dart file in profile mode.**   
+**We can open the flutter dev tools in visual studio code command palette. Search for flutter dev tools and you will see the option to open the dev tools in web browser.**   
+In the dev tools there is flutter inspector. Inside this we can see the currently rendered widget tree. We can select each individual widget and learn more about them. For widgets like Row and Column we can use the inspector to adjust the alignment of main axis and cross axis in real time. You can also select the widget from the emulator screen and view the widget in the inspector.
+
+We can also use guidelines to see the alignment of items. You can click on the image icon in the flutter inspector to see the images that are using too much memory. 
