@@ -1185,3 +1185,728 @@ This condition to fail and the navigation to the results screen does not happen.
 In the dev tools there is flutter inspector. Inside this we can see the currently rendered widget tree. We can select each individual widget and learn more about them. For widgets like Row and Column we can use the inspector to adjust the alignment of main axis and cross axis in real time. You can also select the widget from the emulator screen and view the widget in the inspector.
 
 We can also use guidelines to see the alignment of items. You can click on the image icon in the flutter inspector to see the images that are using too much memory. 
+
+We typically use models folder to handle the data models required for the application. Flutter has the `DateTime` type which lets us store date information. It is a built in type and we don't need to import anything.  
+We can generate unique id using the uuid package. To use this we need to install uuid. The command is :  
+`flutter pub add uuid`   
+After this we can import the uuid.dart file from the uuid package. We then need to instantiate an object of the Uuid class globally in your dart file.   
+Dart support Initializer lists with constructors which lets you define attributes of objects which are not received through constructor arguments. We can use this to generate a unique id for a new object.   
+To create a unique id we call the `v4()` method of the uuid object. For example:
+
+```javaScript
+import 'package:uuid/uuid.dart';
+ 
+const uuid = Uuid();
+ 
+class Expense {
+  Expense({required this.title, required this.amount, required this.date})
+    : id = uuid.v4();
+  final String id;
+  final String title;
+  final double amount;
+  final DateTime date;
+}
+```
+
+To store category information we can use a string attribute inside of our class but this is error prone because this attribute can have any valid string value, if there is a typo in the category we passed to the constructor we might lose valid information when we use the data. To avoid this problem we can create a list of allowed values to chose from. We use the **enum** keyword lets us create a custom type to solve our above problem. It supports a combination of predefined allowed values. We define the allowed values between `{}` . **NOTE:** We should not use quotes for allowed values, also there should not be any semi-colon after the closing brace.   
+Eg:  
+`enum Category{food, travel, leisure, work}  
+` After adding the enum type the class will now look like:
+
+```javaScript
+import 'package:uuid/uuid.dart';
+ 
+const uuid = Uuid();
+enum Category{food, travel, leisure, work}
+ 
+class Expense {
+  Expense({required this.title, required this.amount, required this.date, required this.category})
+    : id = uuid.v4();
+  final String id;
+  final String title;
+  final double amount;
+  final DateTime date;
+  final Category category;
+}
+```
+
+If you have a list of widgets you want to display and you don't exactly know how many items (unknown length) will be there using a `Column` widget is not recommended. Because all the widgets defined under the column widget will be created once the column widget is active. If there are 1000 items in the list it will be created behind the scenes when the column widget is active on the screen. Only a small number of items are needed at a time because the screen cannot display the entire list at a time. It will cause performance issues. To handle these situation flutter gives us the `ListView` widget.
+
+`ListView` can be created like normal widgets and we can pass the children argument. This will create a scrollable list. This also create all the child widgets at runtime which defeats the purpose.   
+**We should use the** `**ListView.builder()**` **constructor function. This instructs the flutter to create a scrollable list but only create them when they are about to become visible on screen.** 
+
+This function takes in an item builder parameter to which we should pass a function. The function should take in 2 parameters and should return a widget. **The parameters are context object and the index value which is automatically provided by flutter, so we simply pass it.**  
+We should also pass the `itemCount` parameter to the listview builder constructor. This is required to get the number of items that should be displayed in the list. The itemBuilder function will be called as many times as the defined itemCount. The example will look like:
+
+```javaScript
+Widget build(BuildContext context) {
+    return ListView.builder(
+      itemCount: expenses.length,
+      itemBuilder: (context, index) => Text(expenses[index].title),
+    );
+  }
+```
+
+This approach significantly improves the performance of the application by creating items only when needed.
+
+**NOTE:** If you have nested list widgets you will surely run into problems because flutter may not know how to size them correctly. To avoid this we should wrap the inner list widget in the Expaneded widget. eg:
+
+```javaScript
+return Scaffold(
+      body: Column(children: [Text('Chart'),
+      Expanded(child: ExpenseList(expenses: _registeredExpenses)),
+      ]),
+    );
+```
+
+**You should keep the build method of each flutter widget lean as possible. If you split complex widgets to multiple sub widgets.** 
+If you have many widgets, you can create a widgets folder inside which we can create sub folders for respective widgets.
+
+**Card** is built in widget in flutter which adds a container, a subtle elevation and a shadow. It makes the content look stylish and elegant. It also automatically add a small top and bottom margin. The card widget takes in a `child` parameter. eg:
+
+```javaScript
+ Widget build(BuildContext context) {
+    return Card(child: Text(expense.amount.toString()),);
+  }
+```
+
+**NOTE:** Card has a margin parameter but not a padding parameter. To add a padding inside of a card we should wrap the child with a `Padding()` widget. Flutter provides a `symmetry()` functions with the `EdgeInsets` constructor which allows to have symmetric padding or margin horizontally and vertically.
+
+We can use `.toStringAsFixed()` methods to convert numbers with decimal places (double) to string with fixed number of decimal places. For example if we have a value like 12.3433 it will be diplayed like: 12.34 if we pass 2 to this method.   
+If we need to display $ sign inside of a string We should use the extended string interpolation syntax which is : `${}` . Also we must escape the $ symbol with \\.  
+For example:  
+` Text('\$${expense.amount.toStringAsFixed(2)}'),` 
+
+The **Spacer** widget can be used in any column or row to tell flutter to create all the space it can get between other widgets. This can be used to push the remaining widgets to left and right for a row widget. eg:
+
+```javaScript
+Row(children: [Text('\$${expense.amount.toStringAsFixed(2)}'),
+             const Spacer(),
+             Row(children: [
+              Icon(Icons.alarm,),
+              SizedBox(width: 8,),
+              Text(expense.date.toString())
+             ],)
+            ],
+            )
+```
+
+When we convert the `DateTime` object to a string it will display the entire timestamp this is not desired in UIs where we want to display just the date. Also we can add icons to the expense model so that we can distinctly identify them easily. For this we can create a constant inside the model class. We can create a map with the enum values of category as key and the value would icons from the built-in class. We can format the date from the class expense class itself by using a getter. **In flutter getters are computed properties i.e, properties that are dynamically derived based on the class properties.**   
+Formatting date by just using dart is quite cumbersome, so we can use a third party flutter package called intl. To install it:
+
+`flutter pub add intl`   
+And we can import it like   
+`import 'package:intl/intl.dart';`   
+In this package we have the `DateFormat` class, to this class we have the `yMd()` constructor which creates a formatter for year, month and date.
+
+There are multiple constructors available in this class which we can use. We can initialize the formatter object outside of the model class as a final object. Then inside of the getter we can use this object's format method and pass the date property to it. The model class will now look like:
+
+```javaScript
+import 'package:flutter/material.dart';
+import 'package:uuid/uuid.dart';
+import 'package:intl/intl.dart';
+ 
+final formatter = DateFormat.yMd();
+const uuid = Uuid();
+ 
+enum Category { food, travel, leisure, work }
+ 
+const categoryIcons = {
+  Category.food: Icons.lunch_dining,
+  Category.travel: Icons.flight_takeoff,
+  Category.leisure: Icons.movie,
+  Category.work: Icons.work,
+};
+ 
+class Expense {
+  Expense({
+    required this.title,
+    required this.amount,
+    required this.date,
+    required this.category,
+  }) : id = uuid.v4();
+  final String id;
+  final String title;
+  final double amount;
+  final DateTime date;
+  final Category category;
+ 
+  String get formattedDate {
+    return formatter.format(date);
+  }
+}
+```
+
+The `Scaffold` widget also has the `appBar` parameter which we can use to set app bar for our application. App bar takes in a `PrefferedSizeWidget` . We can use the `AppBar()` widget for this. For appbar we need to specify the actions which takes in a list of widgets. This is typically used to display buttons in top app bar. `IconButton` is used to show an icon on the button. The `AppBar()` widget automatically allocates space for the the appbar to align nicely on the screen. The appbar also support title which sets a title for the app bar. This takes in a Text widget. The code will now look like:  
+
+```javaScript
+return Scaffold(
+      appBar: AppBar(
+        title: const Text('Flutter Expense Tracker'),
+        actions: [IconButton(onPressed: () {}, icon: Icon(Icons.add))],
+      ),
+      body: Column(
+        children: [
+          Text('Chart'),
+          Expanded(child: ExpenseList(expenses: _registeredExpenses)),
+        ],
+      ),
+    );
+```
+
+To make the icon button of the app bar functional we can create a function which opens a modal overlay. Inside the function we need to call `showModalDialogBottomSheet()` . This is provided by flutter. We should pass `context` and `builder` arguments for `showModalBottomSheet` widget. The context argument is automatically available even though we are outside of the build method. This is because we have a global context object available inside of a class which extends the State class. **context object can be thought of as a collection of metadata managed by flutter that belongs to a specific widget (every widget has it's own context object). It also has information of the position of widget in the overall widget tree.** 
+**Whenever you see a builder argument in flutter we must pass a function.**   
+The builder function will automatically get the context object which we must accept it through the function argument. This object will be available throughout the modal. 
+
+This function is responsible for rendering the widget once the modal is opened. The code will look like:
+
+```javaScript
+  void _addExpenseOverlay(){
+    showModalBottomSheet(context: context, builder: (ctx)=> Text('Modal Bottom Sheet'));
+  }
+```
+
+This will display a tiny text at the bottom of the screen. Once you press the backdrop it will close the model.
+
+The `TextField()` widget provides a way to get text input from the user. We can pass `maxLength` argument to this widget to restrict the maximum number of characters allowed to this input. We can also specify the `keyboardType` argument to specify the type of keyboard layout such as number input, email input, phone input etc. The default type is Text which allows any characters by providing the standard qwerty keyboard. The `decoration` parameter is used to provide a label for the text field. It requires an `InputDecoration` object. We can create it with a `InputDecoration` constructor to which we pass the `label` argument. This argument is the text we display as the label for the text field, we use the Text widget to create the label text. The example of a TextField widget will look like:
+
+```javaScript
+const TextField(
+          maxLength: 50,
+          decoration: InputDecoration(
+            label: Text('title'),
+          ),
+        )
+```
+
+We can save the entered value entered to the textfield by passing the `onChanged` parameter. This parameters expects a function. We can either define an anonymous function which accepts a string or create a function and point it. The function will look like:
+
+```javaScript
+ var _enteredTitle = '';
+ 
+  void _saveTitleText(String inputValue) {
+    _enteredTitle = inputValue;
+  }
+```
+
+We pass the argument as:
+
+```javaScript
+TextField(
+            onChanged: _saveTitleText,
+            maxLength: 50,
+            decoration: const InputDecoration(label: Text('title')),
+          )
+```
+
+We may need to use state as we are not displaying the text anywhere else in the app for now. 
+
+The above shown is one way of storing the user input. It can be cumbersome to store and manage all the inputs like that. Alternatively, we can create a final property inside of the class which is an object of `TextEditingController` class. This is a class provided by flutter. This object optimizes the collection of user input, we can pass this object to the text field to do all the heavy lifting of storing and entering the values and so on.   
+**NOTE:** When you create a TextEditingController object you should tell flutter to close it, otherwise it will remain in memory even if the widget is not active on the screen. We should override the **dispose()** method which is a life cycle method which destroys the created object in the state when it is no longer required by the UI, this is automatically called by flutter. **Only widgets which extends State class can implement the dispose method.** The code will look like:
+
+```javaScript
+  final _titleController = TextEditingController();
+ 
+  @override
+  void dispose(){
+    _titleController.dispose();
+    super.dispose();
+  }
+```
+
+After adding this you don't need an `onChanged` parameter to accept input. You need to pass the controller argument which points to the text editing controller object that you created. So the code will be like:
+
+```javaScript
+TextField(
+            controller: _titleController,
+            maxLength: 50,
+            decoration: const InputDecoration(label: Text('title')),
+          )
+```
+
+To access the text from the controller object we can simply refer to the text property of the text controller object that you have created. It will be like:  
+`print(_titleController.text);` 
+
+We can set the prefix text to a `TextField` by defining `prefixText` argument to the `InputDecoration` constructor. This will show the prefix once the particular text field is on focus. Eg:
+
+```javaScript
+TextField(
+            controller: _amountController,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              label: Text('amount'),
+              prefixText: '\$',
+            ),
+          )
+```
+
+To close the modal manually upon pressing on a button we can use the `pop` method of the `Navigator` class. This method requires the context object which we automatically get. We can call this function on button press to close the current context(i.e, modal) when the button is pressed. The example code will look like:
+
+```javaScript
+             TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: const Text('cancel'),
+              )
+```
+
+**If we wrap TextField inside of a Row there will be conflict on the space allocation so we should wrap the TextField widget inside of the Expanded widget. This way we can split the space of a row 2 or more TextFields.**
+
+There is no default DatePicker widget in flutter, but we can easily create one. We use a text widget to display the date and a button on which we press to open the date picker. This will be done through a function which will be called on the button press. Inside this function we can call the showDatePicker() method. This takes in the `context`,` initialDate`,` firstDate` and `lastDate` as argument. All of these requires datetime objects as arguments **except for context**. The code will look like:
+
+```javaScript
+  void _presentDatePicker(){
+    final now = DateTime.now();
+    final firstDate = DateTime(now.year - 1, now.month, now.day);
+    showDatePicker(context: context, initialDate:now, firstDate: firstDate, lastDate: now);
+  }
+```
+
+The `showDatePicker` method returns a `DateTime` object which is of type `Future`. It is used to store values that comes in future. It acts as a wrapper to store a value you not yet have but which you will have in the future. On the future object we can call the **.then()** method which takes in a function. This function will get the value automatically when the future object has a value. Commonly we use anonymous functions.   
+Another way is to mark the function as async and specify the await keyword infront the the method which returns a future object.  
+syntax:
+
+```javaScript
+return_type func_name(arguments....) async{
+    final value = await method_which_returns_future_obj();
+    //code to be executed after the value is obtained
+}
+```
+
+Internally when a function call is marked as await flutter tells to wait for the function to return the value as the value might not be available right away. The remaining lines of the function code will be executed only once the value is obtained from the method marked with await.
+
+We can use update the modal screen when the date is picked by using setState. The method will now look like:
+
+```javaScript
+DateTime? _selectedDate;
+  void _presentDatePicker() async {
+    final now = DateTime.now();
+    final firstDate = DateTime(now.year - 1, now.month, now.day);
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: now,
+      firstDate: firstDate,
+      lastDate: now,
+    );
+    setState(() {
+      _selectedDate = pickedDate;
+    });
+  }
+```
+
+We are putting a `?` after the DateTime to indicate that the value can be null. In the widgets UI we can use:
+
+```javaScript
+                   Text(
+                      _selectedDate == null
+                          ? 'No date selected'
+                          : formatter.format(_selectedDate!),
+                    )
+```
+
+We can create a drop down button using the `DropdownButton` widget in flutter. It has 3 arguments `value`, `items` and and the `onChanged` . The onChanged argument expects a method with an argument of `dynamic` type. The items argument requires a List of `DropdownMenuItem<Object>` . We already have a list of categories as an enum, to convert a list of one type of another we can use the map method on the enum object. Inside the map method We can create an object of `DropdownMenuItem` . We can access the name attribute of the category inside of the map to pass it as an argument to the `DropdownMenuItem` constructor. Finally we need to call the `.toList()` method on the map method to make it is a list instead of an iterable. The `value` argument is used to set the selected value internally upon selection of the option. We can set the selected value variable to this.  
+**To actually store the selected value we need to use a variable as the DropdownButton does not have a controller.** 
+
+We can create a new variable for storing the category in the class and assign it a default category initially. We then need to use the `setState` method to set the selected category to the variable and store the value into a variable.   
+**NOTE:** The `DropdownMenuItem` requires a value argument also.   
+The code will look like:
+
+```javaScript
+  Category _selectedCategory = Category.leisure;
+```
+
+```javaScript
+DropdownButton(
+  value: _selectedCategory,
+  items: Category.values
+      .map(
+        (value) => DropdownMenuItem(
+          value: value,
+          child: Text(value.name.toUpperCase()),
+        ),
+      )
+      .toList(),
+  onChanged: (value) {
+    if (value == null) {
+      return;
+    }
+    setState(() {
+      _selectedCategory = value;
+    });
+  },
+)
+```
+
+We must validate the input from the user before submitting the data. For this we can create a helper function to validate the input of each respective field.   
+We can convert the string of the amount field to a number using `double.tryParse()` method. **This takes in a string value and try to transform it into a number, if it is not able to convert the string into a number it will return null.** 
+We use **&&** and **||** operators to check multiple conditions in dart, which is similar to other programming languages.
+
+We can show error messages as a pop up using the `showDialog()` method. It requires a `context `value and a `builder` function as argument. The builder function should take in a `context` object as input and return a widget as output. The widget that you return should be the built-in `Dialog` widget. The `AlertDialog()` is a built in widget which returns a dialog optimized for alerts. This widget needs a `title` argument which is typically a text widget which specifies the title of the error message. We also need to pass the `content `argument, which defines the description of the error message. The `actions` parameter takes in a list of actions that can be performed on the dialog. The whole function will look like:
+
+  
+```javaScript
+void _submitExpenseData(){
+    final enteredAmount = double.tryParse(_amountController.text);
+    final amountIsInvalid = enteredAmount == null || enteredAmount <= 0; 
+    if(_titleController.text.trim().isEmpty || amountIsInvalid || _selectedDate == null){
+      //show error message
+      showDialog(context: context, builder: (ctx)=>AlertDialog(title: const Text('invali input'),
+      content: const Text('please make sure a valid title, amount, date and category was entered'),
+      actions: [
+        TextButton(onPressed: (){
+          Navigator.pop(ctx);
+        }, child: const Text('Ok'))
+      ],
+      ));
+      return;
+    }
+ 
+  }
+```
+
+We also need to make sure that this function is called when we the submit button is pressed.
+
+```javaScript
+ElevatedButton(
+  onPressed: _submitExpenseData,
+  child: const Text('save expense'),
+)
+```
+
+To make the modal full screen we pass the `isScrollControlled` parameter to true `showModalBottomSheet()` method so that the modal takes the full available height. Additionally we can adjust the padding of the widget so that the UI components of the modal are not hidden. 
+
+To make sure that the list items are swipe-able we can wrap out list item with `Dismissable()` widget. It requires a child which is the list item, it also needs a key. Keys are provided in flutter to make widgets uniquely identifiable. Such a key can be created for the Dismissable widget using the `ValueKey()` constructor function. For most of the widgets we may not need to use the key, but here it is crucial because we need to make sure that the correct data is deleted. Here we can pass the particular expense object. The implementation will look like:
+
+```javaScript
+Widget build(BuildContext context) {
+    return ListView.builder(
+      itemCount: expenses.length,
+      itemBuilder: (context, index) => Dismissible(
+        key: ValueKey(expenses[index]),
+        child: ExpenseItem(expense: expenses[index]),
+      ),
+    );
+  }
+```
+
+This make the list item swipe-able and upon swiping it will remove from the screen, but the associated with it will not be removed. To actually remove the data we can use the `onDismissed` parameter on the `Dismissable` widget which allows you to call a function when the widget has been swiped away. We need to remove the item from Expense list when we swipe the list item. We can create a custom function which removes the expense from the `_registeredExpense` list. We can simply call the `.remove()` method on this list object which removes the list item which is passed as the argument. We also need to make sure that the widget is updated after data is removed so we should wrap this inside of setState(). The implementation will be like:  
+
+```javaScript
+ void _removeExpense(Expense expense){
+    setState(() {
+      _registeredExpenses.remove(expense);
+    });
+  }
+```
+
+We cannot directly point this function to `onDismissed` argument. It requires a function which takes in a `DismissDirection`object. This allows to handle multiple functionalities based on how the user swiped. We can create an anonymous function which automatically takes in the direction as a parameter. And then we can call this function and pass the expense object. The whole implementation will now look like:
+
+```javaScript
+Widget build(BuildContext context) {
+    return ListView.builder(
+      itemCount: expenses.length,
+      itemBuilder: (context, index) => Dismissible(
+        key: ValueKey(expenses[index]),
+        onDismissed: (direction){
+          removeExpense(expenses[index]);
+        },
+        child: ExpenseItem(expense: expenses[index]),
+      ),
+    );
+  }
+```
+
+To show a message once an item is removed from the expense list we can use the `ScaffoldMessenger` widget. We should pass the context object to the of() constructor method and chaining the `showSnackBar()` method. The showSnackBar() method needs a `SnackBar` object. We can easily create it using the constructor of `SnackBar`. This constructor requires a content which is a widget. In most cases this will be a Text widget to display plain text. We can also set a `duration` parameter to specify the time that the snackbar needs to be visible on screen. This parameter requires a `Duration` object. The duration can be in `days`, `hours`, `milliseconds`, `microseconds`, `minutes `or `seconds`. We can pass the appropriate parameter to create of a duration object. We can also add a `action` parameter to the snackbar. This needs a `SnackBarAction` object which we should create using it's constructor. **It needs a** `**label**` **which should be a plain string, not a Text widget**.
+
+We should also pass the `onPressed` parameter to define the function when the action button is pressed.   
+To insert the item into the exact same position in a list we use the `.insert()` method. The index method requires an index position and the element that needs to be inserted into the position. The updated remove function will look like:
+
+```javaScript
+void _removeExpense(Expense expense) {
+    final expenseIndex = _registeredExpenses.indexOf(expense);
+    setState(() {
+      _registeredExpenses.remove(expense);
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Expense deleted.'),
+        duration: const Duration(seconds: 3),
+        action: SnackBarAction(
+          label: 'Undo',
+          onPressed: () {
+            setState(() {
+              _registeredExpenses.insert(expenseIndex, expense);
+            });
+          },
+        ),
+      ),
+    );
+  }
+```
+
+To manually clear snakbars to make sure that they won't overlap we can use the `.clearSnackBars()` method. It will look like:  
+` ScaffoldMessenger.of(context).clearSnackBars();`   
+This will remove the snackbar without considering the duration. 
+
+We can use the `theme` parameter of the `MaterialApp` to control the color, text and style each individual widget of an application. The theme parameter needs a `ThemeData` object which can be created using the constructor of the respective class. It provides a lot of options which most of it should not be used because they might be removed in the future. If you are using the `ThemeData` constructor you should use all the parameters because the default styling will be removed. It might not be necessary in many cases because the default styling may be fine.   
+Alternatively we can use `.copyWidth()` method on the `ThemeData` constructor and pass the useMaterial3 parameter as true. This allows you to override particular style attributes individually. 
+
+eg:
+
+```javaScript
+MaterialApp(
+    theme: ThemeData().copyWith(
+    scaffoldBackgroundColor: Color.fromARGB(255, 220, 189, 252)),
+)
+```
+
+  
+We can use the `colorScheme` parameter to set a group of common colors which will be applied to the widgets. It is the easiest approach. We define a single color scheme and flutter then infers different shades of colors for different widgets.   
+We can create a global variable to define the color scheme so that it is much more manageable.
+
+**NOTE**: For global variables it is a common convention to use k as the starting letter of the variable name.
+
+The ColorScheme constructor provides a lot of options to set various attributes of the color scheme, We should set all the attributes. Alternatively we can use the` .fromSeed()` constructor function which accepts a `seedColor` parameter.
+
+We can set a color scheme like:  
+`var kColorScheme = ColorScheme.fromSeed(seedColor: const Color.fromARGB(255, 96, 59, 181),);`   
+and use it inside of the theme like.
+
+```javaScript
+MaterialApp(
+      theme: ThemeData().copyWith(
+        colorScheme: kColorScheme,
+      ),
+      home: Expenses(),
+    ) 
+```
+
+We can add additional customization for individual components like the `appBarTheme` by passing the respective parameter. We can set the color scheme of these using the color scheme variable we defined. 
+
+```javaScript
+ MaterialApp(
+      theme: ThemeData().copyWith(
+        colorScheme: kColorScheme,
+        appBarTheme: const AppBarTheme().copyWith(
+          backgroundColor: kColorScheme.onPrimaryContainer,
+          foregroundColor: kColorScheme.primaryContainer,
+        ),
+      ),
+      home: Expenses(),
+    )
+```
+
+We can set themes for cards using the `cardTheme` parameter. It expects a `CardThemeData` object. We can use `copyWith()` constructor to easily create a card theme like we did for `appBarTheme`. We can set a color and a default margin for all cards inside of this. Like:
+
+```javaScript
+cardTheme: const CardThemeData().copyWith(
+          color: kColorScheme.secondaryContainer,
+          margin: const EdgeInsets.all(16),
+        )
+```
+
+To style the elevated buttons we can similarly use the `elevatedButtonStyle` parameter and this expects a `ElevatedButtonThemeData` object. **For this there is no** `**copyWith()**` **constructor defined**. Instead we use the `style` parameter inside of the constructor which expects a `ButtonStyle` object. This lets you define the style from the ground up when we want a fully customized button. Alternatively we can use `ElevatedButton.styleFrom()` constructor which lets you override the selected styles. It will look like:
+
+```javaScript
+elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: kColorScheme.primaryContainer
+          )
+        )
+```
+
+We can also set a theme to the text globally using the `textTheme` parameter. This expects a `TextTheme` object. To set a text theme we can instantiate the `ThemeData`object and on its `textTheme` attribute we can call the `copyWith()` method. To this method we can specify the different text sizes. The available text sizes can be referred through the official flutter documentation. We can either use the TextStyle constructor to create a text style from scratch or use `ThemeData().textTheme.textSize.copyWith()` to override some selective properties. the `textSize` referred here should be referred on official documentation. Eg:
+
+```javaScript
+ textTheme: ThemeData().textTheme.copyWith(
+          titleLarge: TextStyle(
+            fontWeight: FontWeight.normal,
+            color: kColorScheme.onSecondaryContainer,
+            fontSize: 14,
+          ),
+        )
+```
+
+Since we have already defined a `foregroundColor` for the appbar the color we defined above will not be affected, but the size will be changed.
+
+We can also use our custom themes in the widgets of our app. For example we can set the text style of a widget from by specifying the `style` parameter. The value of this parameter should be passed as a theme object we can use the `.of()` method of the Theme class to access the themes of the app by passing the context object. We can access the `textTheme` property of this object to get the theme style set by us and the default styles. We can access the various properties from this by using the . operator. For example:  
+`Text(expense.title, style: Theme.of(context).textTheme.titleLarge),`   
+We can access styling from the theme for any type of custom widgets.
+
+We can set a background color when we swipe the card. We can use the `background` parameter of the `Dismissible` widget and set it to a container. Inside of the container we have the` color` attribute which can be set to a value extracted from the theme we have defined. Like we used the color from the theme before we can access the `Theme` object's `colorScheme` attribute and in this object we have various pre-defined colors generated from the color seed that we defined. One such color is error. The example will look like:
+
+```javaScript
+Dismissible(
+        background: Container(
+          color: Theme.of(context).colorScheme.error,
+          margin: EdgeInsets.symmetric(horizontal: 16),
+        ),
+        key: ValueKey(expenses[index]),
+        onDismissed: (direction) {
+          removeExpense(expenses[index]);
+        },
+        child: ExpenseItem(expense: expenses[index]),
+      )
+```
+
+We can also get the margin from the theme we defined. We cab access the `margin` attribute of the `cardTheme` which we will get from the Theme object. We will get the value as double so we need to use the `EdgeInsetsGeometry` constructor to convert it into a valid margin. Since we have defined the margin inside the card theme as symmetric we need to divide the value by 2 to get the desired result which is the same as that of the card theme we have. The code will look like:
+
+```javaScript
+Dismissible(
+        background: Container(
+          color: Theme.of(context).colorScheme.error,
+          margin: EdgeInsets.symmetric(
+            horizontal: Theme.of(context).cardTheme.margin!.horizontal/2,
+            vertical: Theme.of(context).cardTheme.margin!.vertical/2,
+          ),
+        ),
+        key: ValueKey(expenses[index]),
+        onDismissed: (direction) {
+          removeExpense(expenses[index]);
+        },
+        child: ExpenseItem(expense: expenses[index]),
+      )
+```
+
+We are not limited to using the values from the theme. We can also extend or override them in our widget. For the colors we can call the `.withAlpha()` to adjust the opacity. The `withOpacity()` method is now deprecated. For example:  
+`color: Theme.of(context).colorScheme.error.withAlpha((0.65*255).toInt()),`   
+We need to pass an integer value to the colors. We can multiply by the desired percentage we want with 255 to obtain the desired color. Similarly there are also methods like `withBlue()`, `withGreen()` , `withRed()` and `withValues()` which let's you override all the values of the color.  
+We can also use `copyWith()` to override specific attributes of a theme.
+
+We can enable dark mode support for our application. When we switch the android system to dark theme with our current setup our app's theme remains unchanged. We can provide dark theme fallback to make sure that our app aligns with the system color theme. We can create a dark color scheme variable with a color scheme suitable for dark mode. We can define the seed to this color scheme and inside of the `MaterialApp` widget we can specify the `darkTheme` parameter. We can create dark object with the `dark()` constructor of `ThemeData` class. Since we are overriding only some of the features we can use `copyWith()` constructor to define the exact color themes for our widgets. note that we are not passing any parameters to the `dark()` constructor function. 
+
+We can use the default theme mode of an application. We can opt for light theme or dark theme or let the system setting decide the theme to choose. We can specify this by setting the `themeMode` parameter inside of the `MaterialApp` widget. We can access the constant values by tapping into the `ThemeMode` class. It has parameters `light`, `dark` and `system`.   
+We need to define the same theme parameters we set for the light mode inside of the dark mode if we are accessing theme parameters for our widgets. 
+
+By default if you generate a color scheme from a color seed like this:
+
+```javaScript
+var kDarkColorScheme = ColorScheme.fromSeed(
+  seedColor: const Color.fromARGB(255, 5, 9, 125),
+);
+```
+
+It will be optimized only for light mode so even if you switch to a dark theme the colors will be brighter. We need to explicitly tell flutter to generate colors optimized for dark mode. We can do this by adding the brightness parameter to the ColorScheme constructor function. The code will look like:
+
+```javaScript
+var kDarkColorScheme = ColorScheme.fromSeed(
+  brightness: Brightness.dark,
+  seedColor: const Color.fromARGB(255, 5, 9, 125),
+);
+```
+
+The entire code will now look like:
+
+```javaScript
+import 'package:expense_tracker/widgets/expenses.dart';
+import 'package:flutter/material.dart';
+ 
+var kColorScheme = ColorScheme.fromSeed(
+  seedColor: const Color.fromARGB(255, 96, 59, 181),
+);
+ 
+var kDarkColorScheme = ColorScheme.fromSeed(
+  brightness: Brightness.dark,
+  seedColor: const Color.fromARGB(255, 5, 9, 125),
+);
+```
+
+```javaScript
+void main() {
+  runApp(
+    MaterialApp(
+      darkTheme: ThemeData.dark().copyWith(
+        colorScheme: kDarkColorScheme,
+        cardTheme: const CardThemeData().copyWith(
+          color: kDarkColorScheme.secondaryContainer,
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: kDarkColorScheme.primaryContainer,
+            foregroundColor: kDarkColorScheme.onPrimaryContainer,
+          ),
+        )
+      ),
+     
+```
+
+```javaScript
+theme: ThemeData().copyWith(
+  colorScheme: kColorScheme,
+  appBarTheme: const AppBarTheme().copyWith(
+    backgroundColor: kColorScheme.onPrimaryContainer,
+    foregroundColor: kColorScheme.primaryContainer,
+  ),
+  cardTheme: const CardThemeData().copyWith(
+    color: kColorScheme.secondaryContainer,
+    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+  ),
+  elevatedButtonTheme: ElevatedButtonThemeData(
+    style: ElevatedButton.styleFrom(
+      backgroundColor: kColorScheme.primaryContainer,
+    ),
+  ),
+  textTheme: ThemeData().textTheme.copyWith(
+    titleLarge: TextStyle(
+      fontWeight: FontWeight.normal,
+      color: kColorScheme.onSecondaryContainer,
+      fontSize: 14,
+    ),
+  ),
+),
+home: Expenses(),
+),
+);
+}
+```
+
+The final step is to add the Charts functionality to our expense tracker app for this we can create an `ExpenseBucket` class inside of our model file, since we have multiple categories where we need to manage our expenses. We need to sum them up which belong to the respective category and display it inside of the chart. This class has 2 attributes which are category and a list of expenses. We can also create a getter to get the total expenses belonging to a category. We can sum up the expenses corresponding to a bucket(since we will have 1 bucket for each category). We can use a for loop for this. We can use:
+
+```javaScript
+for(final item in items){
+    //loop body
+}
+```
+
+To go over the items in the loop and and access individual item we can use this variant of the for loop. We can use final here because in every iteration a new item will be created. The example will look like:
+
+```javaScript
+for(final expense in expenses){
+      sum += expense.amount;
+    }
+```
+
+The complete class will look like:
+
+```javaScript
+class ExpenseBucket {
+  const ExpenseBucket({required this.category, required this.expenses});
+  final Category category;
+  final List<Expense> expenses;
+ 
+  double get totalExpenses{
+    double sum = 0;
+    for(final expense in expenses){
+      sum += expense.amount;
+    }
+    return sum;
+  }
+}
+```
+
+We can use this type of for loop inside of our build method instead of map to go over a list of widgets or items. When using it like that we should never use curly braces.
+
+We can create alternative constructor functions for our classes. The syntax is:  
+`ClassName.functionName(arguments): argument = initializerList;`   
+We can set initial values to an object from the constructor definition by using the initializer list syntax we used earlier. In our case we want to filter out the expenses based on the category set the expenses of the ExpenseBucket class. The code will look like:
+
+```javaScript
+  ExpenseBucket.forCategory(List<Expense> allExpenses, this.category)
+    : expenses = allExpenses
+          .where((expense) => expense.category == category)
+          .toList();
+```
+
+We can use `MediaQuery` class to get system properties. We can use it to check if we are under darkmode or under light mode. We can use it like: `MediaQuery.of(context).platformBrightness`. This will return` Brightness.light` or `Brightness.dark` .
