@@ -1910,3 +1910,187 @@ We can set initial values to an object from the constructor definition by using 
 ```
 
 We can use `MediaQuery` class to get system properties. We can use it to check if we are under darkmode or under light mode. We can use it like: `MediaQuery.of(context).platformBrightness`. This will return` Brightness.light` or `Brightness.dark` .
+
+Responsiveness makes sure that the application takes up available space efficiently irrespective of the screen size. Responsiveness ensures that the layout of the application adjusts according to the available space. 
+
+We can make sure that the app's orientation does not change even if the device orientation changes by locking the orientation of the app. To do this we need to import the `services.dart` file from the `flutter` package. Then inside of the main method we can use the `setPrefferedOrientation` method of the `SystemChrome` class. This takes in a list of allowed orientations. This ensures that the application only adjusts to the specified orientation in the list. We can use the `DeviceOrientation` enum to access the different orientations. We can set it to `DeviceOrientation.portraitUp` . This will return a Future so we need to chain a `.then()` method. We should place our entire `runApp() `method to the anonymous function inside of the then. We should pass a function as argument for the anonymous function inside of then even though we are not using it. We should also make sure that we call `WidgetsFlutterBindings.ensureInitialized()` .The entire code will look like:  
+
+```javaScript
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp
+  ]).then((fn){
+     runApp(
+    MaterialApp(
+      darkTheme: ThemeData.dark().copyWith(
+        colorScheme: kDarkColorScheme,
+        cardTheme: const CardThemeData().copyWith(
+          color: kDarkColorScheme.secondaryContainer,
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: kDarkColorScheme.primaryContainer,
+            foregroundColor: kDarkColorScheme.onPrimaryContainer,
+          ),
+        )
+      ),
+      
+```
+
+```javaScript
+theme: ThemeData().copyWith(
+      colorScheme: kColorScheme,
+      appBarTheme: const AppBarTheme().copyWith(
+        backgroundColor: kColorScheme.onPrimaryContainer,
+        foregroundColor: kColorScheme.primaryContainer,
+      ),
+      cardTheme: const CardThemeData().copyWith(
+        color: kColorScheme.secondaryContainer,
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: kColorScheme.primaryContainer,
+        ),
+      ),
+      textTheme: ThemeData().textTheme.copyWith(
+        titleLarge: TextStyle(
+          fontWeight: FontWeight.normal,
+          color: kColorScheme.onSecondaryContainer,
+          fontSize: 14,
+        ),
+      ),
+    ),
+    home: Expenses(),
+  );
+});
+```
+
+`WidgetsFlutterBindings.ensureInitialized() `ensures that the device orientation is locked before the app starts. Locking the device orientation may be essential for some applications so in those cases we can use the code like above. But in our case we need the app to be responsive, so the above code changes are not necessary.
+
+To check how much width we have available we can use the `MediaQuery` class available in flutter. It has a `of()` constructor which takes in the `context` as input. Once the media query object is wired up with the context we can access the various attributes of this object. We can access the size property which gives us access to the size object which holds more information about the available size on the device such as the `aspectRatio` of the device which is running. What we are interested is the available `height` and the `width` which gives us the available width and height of the running device.   
+When you rotate the device the build method gets executed again automatically. 
+
+We can check the width value to check if the device is rotated and conditionally display the widgets. We can switch between the Row and Column widget conditionally to tweak the alignment of widgets. We should also make sure that the widgets does not take entire screen width so that widgets can correctly align items side by side. We can use Expanded in such cases to wrap the child widgets so that the children will take only enough space available for the parent row. The entire code will now look like:  
+
+```javaScript
+Widget build(BuildContext context) {
+  final width = MediaQuery.of(context).size.width;
+  Widget mainContent = const Center(
+    child: Text('No expenses found. Start adding some!'),
+  );
+  if (_registeredExpenses.isNotEmpty) {
+    mainContent = ExpenseList(
+      expenses: _registeredExpenses,
+      removeExpense: _removeExpense,
+    );
+  }
+  return Scaffold(
+    appBar: AppBar(
+      title: const Text('Flutter Expense Tracker'),
+      actions: [
+        IconButton(onPressed: _addExpenseOverlay, icon: Icon(Icons.add)),
+      ],
+    ),
+    body: width < 600
+        ? Column(
+            children: [
+              Chart(expenses: _registeredExpenses),
+              Expanded(child: mainContent),
+            ],
+          )
+        : Row(
+            children: [
+              Expanded(child: Chart(expenses: _registeredExpenses)),
+              Expanded(child: mainContent),
+            ],
+          ),
+  );
+}
+```
+
+This makes sure that the UI updates based on the device orientation.
+
+To understand the above problem which causes the widgets to not become visible we need to understand about the size constraints in flutter. We fixed the problem by wrapping the children of the Row inside of Expanded widget. **Widgets get size based on their own size preferences and the size constraints of parent widgets.** For example let's look at the Column widget. It has some preferences about the size it want to occupy. It wants to take as much height it can get. It only needs width as much as the width of the largest child's width(i.e, the width of a column widget is as much as needed by the children). **Even though the column can take as much height as possible it doesn't overflow the screen because we have placed the column inside of a widgets which restricts it height which is the Scaffold widget. The Scaffold widget has constraints such that the maximum height is the screen height and the maximum width is the screen width.** Every widget has different constraints for its child widgets
+
+The constraints of the parent overrides that of the child widget that is how generally the sizing works in flutter. We can find the constraints of width and height for a component from the layout inspector of the dev tools. It also shows the available empty space of the screen's width and height. For most of the flutter widgets the width and height depends upon what the child widgets want. For the column widget it does not have height constraint which is passed on to the children. Similarly the ListView widget also does not have a height constraint. To enforce the constraint we are using the Expanded widget, it sets the height constraints to the child widgets such that they take the maximum available height instead of the infinite height. 
+
+So we use expanded to add constraints for nested unconstrained widgets. 
+
+We can use the `MediaQuery` class to access parts of UI widgets which overlaps. For example we can access the bottom overlapping UI elements by using:
+
+`MediaQuery.of(context).viewInsets.bottom;`   
+In case of our modal when we add a new expense in landscape orientation the keyboard slides up from the bottom and overlap the input fields. We get this value as double so we can use this to adjust the bottom padding of our widgets. We also must ensure that the content is scrollable otherwise the content will overflow and cause error. For that we can wrap the widget with `SingleChildScrollView` widget.  
+After we do this our modal may not take the entire available height to ensure that it takes the maximum available height we can wrap the `SingleChildScrollView` widget with a `SizedBox` of infinite height
+
+Previously we have added a top padding to ensure that the top part of the modal does not overlap with the device specific areas such as the camera cut out. We guessed a padding that would work and added it to the padding. There is a better way to do this. We does not need to do this incase of appbar since it automatically takes care of this. We can pass the` useSafeArea` parameter and set it to `true` when we show the modal dialogue. Safe area is a feature built into flutter which ensures that the widgets stay away from device specific features such as device camera that affect our UI. The `Scaffold` widget uses the safe area internally, so in most cases we don't need to worry about it. The code will look like: 
+
+```javaScript
+showModalBottomSheet(
+      useSafeArea: true,
+      isScrollControlled: true,
+      context: context,
+      builder: (ctx) => NewExpense(addExpense),
+    );
+```
+
+Alternative to the `MediaQuery` where we need to manually manage the widgets according to the available space flutter also provides a widget which automatically manages the child widgets based on the available space. We can use the `LayoutBuilder()` widget for this. It takes in a builder parameter. It needs a function as argument, the function will automatically get the context object and a constraint object. We need to return our content(other widgets) inside of this function. The constraint object gives us access to which constraints are applied by the parent widget of the current widget we get the properties like `minWidth`, `maxWidth`, `minHeight`, `maxHeight` which we can use for the widgets. This helps us decide which layout we need to render. By using these we can make sure that the widget is reusable and we can actually use them anywhere in our application, because it will only care about the available screen width and height. We can use this information to dynamically change our layout. 
+
+The layout builder widget automatically calls the builder function whenever the layout changes, i.e screen orientation change. We can use the special `if else` syntax(without `{}`) provided by flutter inside of the list to display items conditionally. The code will look like:  
+` final width = constraints.maxWidth;  
+`
+
+```javaScript
+if (width >= 600)
+  Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Expanded(
+        child: TextField(
+          controller: _titleController,
+          maxLength: 50,
+          decoration: const InputDecoration(
+            label: Text('title'),
+          ),
+        ),
+      ),
+      SizedBox(width: 24),
+      Expanded(
+        child: TextField(
+          controller: _amountController,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(
+            label: Text('amount'),
+            prefixText: '\$',
+          ),
+        ),
+      ),
+    ],
+  )
+else
+  TextField(
+    controller: _titleController,
+    maxLength: 50,
+    decoration: const InputDecoration(label: Text('title')),
+  )
+```
+
+**NOTE**: **If we are using the special if syntax inside of the list the body of the if and else conditions should have only one widget.** 
+
+Adaptive apps are whose UI adapts well with the platform on which it is being presented. You can use the same widgets on android and ios but you can also adjust the some widget styles if you want to. For example the app bar title in ios will be moved to center but on android it will be closer to the left end of the app bar. We can explicitly set the `centerTitle` property of the `AppBar` widget to false to make sure that the app title is not centered.   
+Also in IOS flutter uses a different font family for text. On IOS the dialog bar shows exactly like that on android. But flutter provides option to show the dialog which is closer to ios native dialog style. We can leverage this by importing the `cupertino.dart` from the flutter package. We can call the `showCupertinoDialog()` to show the ios native style dialog. Cupertino is the name of native ios design language. The functionality of cupertino widgets are similar to that of normal widgets. The parameters are exactly the same. 
+
+The `CupertinoAlertDialog()` widget is exactly same as `AlertDialog()` . To check the platform we can use the `Platform` class from the `dart:io` package. The import will look like:  
+`import 'dart:io';`   
+The platform class has properties like `isIOS` and `isAndroid`. We can check if it true or false to render platform specific widgets conditionally.  
+eg: 
+
+```javaScript
+if(Platform.isIOS){
+  showCupetinoDialog();
+}else{
+showDialog();
+}
+```
