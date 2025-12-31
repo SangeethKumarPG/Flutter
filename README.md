@@ -2094,3 +2094,53 @@ if(Platform.isIOS){
 showDialog();
 }
 ```
+
+When working with flutter we are working with 3 trees. Two of those trees are typically invisible to the developer. 
+
+1. **Widget Tree**: Nesting of widgets in your code to compose the elements in the UI.
+2. **Element Tree**: Flutter takes in the widget tree and translates into element tree. It is an in-memory representation of your widgets. These representations are used to determine efficient UI updates. These objects are related to the widget objects. They are not exactly the objects that you create with the constructor. Once the build method is encountered for the first time flutter will create an element object for that in memory. But, the build method is called quite frequently. For example if you call the setState in a stateful widget. That widgets build method as well as the child widgets build method will be called again. But flutter may not necessarily recreate those objects. Flutter only creates elements if you add new widgets. Or it removes widgets when you remove them.
+
+Elements are reused if possible. Element tree determines which UI items should be rendered on the screen.   
+ 3. **Render Tree**: It is the combination of visible UI blocks. Creating the render tree and updating the ui of the render tree takes quite a lot of work. So to have optimal performance flutter only make changes in the render only when updates are needed. If updates are needed is decided based on the element tree.   
+The UI updating process goes like this:  
+When the build method is called flutter checks the element tree and reuses existing elements as needed and then after it compares the new element tree to the old element tree and if there are any differences those differences are applied to the render tree and the ui is updated. It only partially updates the re renders the render tree according to the needed ui updates. Flutter manages the element tree and render tree automatically. 
+
+Flutter calls the `createElement` method to create the widget. This is invoked automatically by flutter. If we want we can override this method. This method is called before the build method. Flutter not only creates the widgets for the current element, it creates widgets that makes up the entire ui of the widget. 
+
+When the state of a widget changes it rechecks all the child widgets and verifies the updates. In-order to avoid unnecessary checks we should refactor the widgets which alter and depend on the state. So we should make sure that the we should use the StatefulWidgets sparsely and carefully. Also, make sure that they are as lean as possible. For simple apps this does not matter but for complex apps this can drastically improve the performance.  
+**NOTE:** if we set the `mainAxisSize` parameter of the Column widget to `mainAxisSize.min` it adds a size constraint for the height of a column widget.
+
+For widget trees the build method is called frequently whenever the state changes. But the elements are not re-created un necessarily. Keys are a crucial concept in flutter which determines how the UI is updated. We have seen keys being passed as named arguments inside of the construction functions for all our widgets and we forwarded them to our parent widget. We have also manually created keys for dismissible widgets. 
+
+If the order of widget changes (change their position or place) in the screen for example lets say a list. When we sort the items in the list in ascending or descending order the order of the items changes on the UI. The element skeleton actually stays the same, we keep the element structure same, also new elements are not created, what actually happens is it only updates the reference of which element refers to which widget. Flutter does this for performance reasons. In case of our example list we have the total number of the items are not changing also the type of the widgets are also not changing. The above mentioned approach works for normal widgets. But when it comes to state the perspective changes. Because state managed objects of a widget are managed as independent objects that are connected to the elements. State objects are connected to the element objects that are connected to the corresponding widgets. So if widgets changes their place flutter reuses the elements.
+
+The state objects are not updated when the position changes i.e, they don't move around. 
+
+The above mentioned problem can be solved with the help of keys. Flutter determines weather it can reuse an element by looking at the type of the element. If the element type in the element tree is same as the the type of item in the widget tree in that position where the the element is it keeps that element and updates the reference to the widget it found in the same place in the widget tree. If we introduce keys those keys are also added to the elements. So if your widgets move around the keys move with them, if flutter finds a key on an element it just not only looks at the element and widget type but also at their keys and if the keys don't match it updates the keys on the element, reuses the correct element by matching keys. Keys offers an additional checking mechanism which makes sure that the element, widgets and states are mapped correctly even when the position of items changes.   
+
+You must always set the keys parameter in the constructor so that we can use keys whenever we need to.  
+Fundamentally keys solve the problem of state loss when widgets reorder. Flutter reuses elements by matching widget types at the same position. When you add keys, Flutter also checks if keys match. If widgets move but their keys match existing elements, Flutter correctly reuses those elements and preserves their state. Keys ensure proper widget-element-state mapping when positions change. **Use keys when you have stateful widgets of the same type that can reorder** (like list items).
+
+We can create our own keys in flutter by 2 methods:
+
+1\. By using the `ValueKey()` class of flutter. We can pass any type of value to this as parameter. It will be then used internally as an identification criteria. 
+
+2\. By using `ObjectKey()` class of flutter. We can pass any type of object to this.   
+The first method is suitable in most cases because it offers a light weight solution since flutter only need to manage a single value instead of an entire object.   
+**NOTE**: Whichever approach you use the values you pass to the keys constructor must be unique. And it must be directly connected to your data(not random values). 
+
+The `final` keyword means that you cannot assign a new value into it. It can only be set once. For example in case of a list even if we define the variable as final we can add items to the list using the `.add()` method. This works because the operation happens directly inside of the memory. It does not store the new value in a variable. When you add a new item to the list a new list is created in the memory.   
+ But in case of `var` we can assign new values to the variables. In case of collections like lists we can use the same add method as well as we can override the existing values of the list.   
+  
+With `const` we cannot assign a new value to variables declared as const. **For collections like list we cannot add new items to the list using .add() methods for variables defined as const**. The const keyword ensures that the variables are unmodifiable even behind the scenes. 
+
+We define const for widgets because this allows the reusing of widgets, because the widgets defined as const in one part cannot change in another part of the application thus ensures that it works as intended.   
+If we want to make the values of a list unmodifiable we can use 
+
+`final variable_name = const [list_item1, list_item2...];`   
+Alternatively we can use the shortcut:  
+`const varibale_name = [list_item1, list_item2....];` 
+
+When you create a variable having data with var, this data is stored in memory. The address of the memory location is stored in the variable. If you override the value in the variable a new data is created in the memory and the new address is stored into the variable. If the variable is no longer used (referenced in any of the code) it will remove it from the memory to free up memory. This is done automatically by dart. This process is called garbage collection. 
+
+In case of items such as list it does not create new data in memory but modify the existing data in memory. The address is the same but the internal data is changed. 
