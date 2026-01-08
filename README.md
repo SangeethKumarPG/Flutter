@@ -2144,3 +2144,361 @@ Alternatively we can use the shortcut:
 When you create a variable having data with var, this data is stored in memory. The address of the memory location is stored in the variable. If you override the value in the variable a new data is created in the memory and the new address is stored into the variable. If the variable is no longer used (referenced in any of the code) it will remove it from the memory to free up memory. This is done automatically by dart. This process is called garbage collection. 
 
 In case of items such as list it does not create new data in memory but modify the existing data in memory. The address is the same but the internal data is changed. 
+
+When you are building a multi-screen app every screen will return a `Scaffold` widget.
+
+Flutter has a `GridView` widget which renders a grid view for displaying items. Like the `ListView` widget grid view widget also has a builder constructor function if you have a very long list of grid items. If you have only a small number of items we can use the normal `GridView` constructor. For this constructor we need the list of items as `children` argument along with a `gridDelegate`argument. The gridDelegate controls the layout of the items. We use the `SliverGridDelegatedWithFixedCrossAxisCount()` class to set a grid with fixed number of columns specified as argument in `crossAxisCount` argument. We can also set the aspect ratio using the `childAspectRatio` parameter. It expects a double value. The aspect ratio determines the size of each individual item. The crossAxisSpacing argument determines the space between the columns. It is specified as integer in number of pixels. The `mainAxisSpacing` determines the spacing between the rows of the grid. The code will look like:
+
+```javaScript
+GridView(gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2,
+        childAspectRatio: 3/2,
+        crossAxisSpacing: 20,
+        mainAxisSpacing: 20,
+      ),
+      children: const [
+        Text('Text 1', style: TextStyle(color: Colors.white),),
+        Text('Text 2', style: TextStyle(color: Colors.white),),
+        Text('Text 3', style: TextStyle(color: Colors.white),),
+        Text('Text 4', style: TextStyle(color: Colors.white),),
+        Text('Text 5', style: TextStyle(color: Colors.white),),
+        Text('Text 6', style: TextStyle(color: Colors.white),),
+      ],
+      )
+```
+
+  
+It is perfectly fine to use values like 3/2 for child aspect ratio since it expects a double value, dart will perform the calculation and provide the value. Notations like this makes the code easier to understand.  
+The `GridView` is scrollable by default if the items exceeds the available screen space. We can also set the `padding` parameter for grid view to set a padding for the entire grid view.
+
+To make a widget like a container tappable you can wrap it with `GestureDetector` widget. It has build in parameter for `onTap` which you can use to make it tappable. It also has many other listeners we can use to handle various user interactions.   
+Alternatively we can use the `Inkwell` widget to wrap around the widget which we want to make it tappable. It will also provide a nice feedback to the user when he taps on the widget on screen. Where as the `GestureDetector` will not provide any feedback on the screen to the user. For the InkWell widget we can use the `onTap` parameter to pass a function which should be executed when the user taps on the widget. The `splashColor` parameter allows to provide the visual feedback. The `borderRadius` allows us to provide a border radius which expects a `BorderRadius` object. The code will look like:
+
+```javaScript
+InkWell(
+      onTap: (){},
+      splashColor: Theme.of(context).primaryColor,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(colors:[
+            category.color.withAlpha((0.55 * 255).toInt()),
+            category.color.withAlpha((0.9 * 255).toInt())
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Text(category.title, style: Theme.of(context).textTheme.titleLarge!.copyWith(
+        color: Theme.of(context).colorScheme.onSurface
+      ))
+      ),
+    );
+```
+
+We can use the `Navigator` class to navigate between the screens. To navigate to another screen we can use the` .push()` method which expects a `context` object and a `route` object. It will push the route to the top of the stack of screen. In flutter navigation works with the help of screen stacks. Screen stack comprises of layers which are present on top of each other. The top most layer will be the currently visible screen. Using the push method we push a new layer to the top of the screen stack which then makes it visible. The layers are switched accordingly when navigation occurs between screens. There is also a `.pop()` method for the navigation class which removes a screen from the screen stack.  
+**NOTE**: **The context property is not globally available in stateless widgets unlike in stateful widgets. We need to accept the context as argument in methods that we are using.**
+
+In case of the Navigation we can use:
+
+```javaScript
+Navigator.push(context, route);
+```
+
+or alternatively we can use:  
+`Navigator.of(context).push(route);`   
+The route object can be created using the `MaterialPageRoute()` constructor which has a `builder` argument. The builder argument expects a function which automatically gets the context object. This function will return a widget. The code will look like:
+
+```javaScript
+ void _selectCategory(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (ctx) => MealsScreen(title: 'Some Title', meals: []),
+      ),
+    );
+  }
+```
+
+Once you navigate to a screen if there is an appbar there will be a back button which pops the screen layer from the screen stack when the user taps on it.
+
+We can use the `.contains()` method to check if an item exists in a list and returns true or false. For example:
+
+```javaScript
+    final filteredMeals = dummyMeals.where((meal)=>meal.categories.contains(category.id)).toList();
+```
+
+The `Stack` widget is used to position multiple widgets directly above each other. This let's us to do things like having an image on the background and some text over it. The Stack widget has a `children` parameter where we pass the widgets as a list. The items in the list should be ordered such as the last items are placed first in the screen.   
+`FadeInImage` widget allows you to have an image with fade in animation. We need to pass the `image` and `placeholder` as argument.   
+The flutter transparent image package allows us to have transparent images (dummy images) as placeholders. We can install it using:  
+`flutter pub add transparent_image`  
+To utilize this we can add the `placeholder` parameter of the` FadeInImage` using the `MemoryImage` class. This is a built-in class in flutter which displays an image from the memory. To this we need to pass the byte stream as argument. The `kTransparentImage` is a constant from the transparent image package. We can pass this to memory image to create a transparent image
+
+For the actual image we will use a network image. The `NetworkImage` constructor is used to create a network image. It accepts a `url` parameter which is the actual image url.   
+To stack the widgets on top of each other inside of a Stack widget we can use the `Positioned` widget. It takes in a child parameter along with some additional parameters which define the position such as bottom. left and right which defines the position of the child item in comparison with the sibling widgets of the positioned widget.   
+Inside of the Text widget without using the style parameter we can define various text styling options such as   
+`maxLines:` Maximum number of lines allowed for the text.
+
+`textAlign `: Text alignment, we can use the default values in the `TextAlign` class like `center`  
+`textOverFlow`: Defines how the overflowed text should be cut off. It also have it's own class and we can use default values.
+
+We can set the `clipBehaviour` parameter of the card widget such that the content from the children of the card which goes outside of the box will simply be cut off if it goes outside of the shape.  
+` clipBehavior: Clip.hardEdge,`  
+We can set the `elevation` attribute to the Card widget to adjust the drop shadow of the card. This accepts an integer value as an argument.  
+` elevation: 2,`
+
+We can pass parameters of a widget as arguments to callback functions. For example:
+
+```javaScript
+ListView.builder(
+            itemBuilder: (context, index) {
+              return MealItem(meal: meals[index], onSelectMeal: (meal){
+                selectMeal(context, meal);
+              },);
+            },
+            itemCount: meals.length,
+          );
+```
+
+We are getting the `meal` to the anonymous function because `**MealItem**` **calls the** `**onSelectMeal**` **callback and passes its** `**meal**` **parameter as an argument**. We don't explicitly define a meal object in the anonymous function — instead, we receive it as a parameter when `MealItem` invokes the callback. 
+
+The `meal` that `MealItem` passes back is the same `meal` we provided to it (`meals[index]`), and we use it in the `selectMeal()` function.
+
+**NOTE:** The `meal` parameter in the anonymous function `(meal)` is **provided by** `**MealItem**` **when it calls the callback**, not accessed directly from the `MealItem` constructor parameter.
+
+Tabbed navigation bar lets you switch between screens by tapping on the options in the navigation bar at the bottom of the screen. The tabbed navigation requires its own screen which then loads the embedded screens. So we need to create a stateful widget so that the screen is changed when the user taps on the option. The Stateful widgets build method should return a scaffold widget. If we have an appbar the title of the appbar should be dynamic. The body is also dynamic since we are navigating to a different screen when the user taps on on the option. Most importantly we need to set the `bottomNavigationBar` to the `Scaffold` widget. We can create the bottom navigation bar using the built in widget class provided by the flutter, which is `BottomNavigationBar()` This has `onTap` parameter which expects a function. The function will get an `index` which is automatically provided by flutter. It is the index position of the tapped item on the navigation bar.
+
+The `items` parameter which expects a list of items is the tabs which we want to display on the navigation bar. The items will be of type `BottomNavigationBarItem ` , we can create them using its constructor function. The navigation bar item needs an `icon` and if we want we can set a `label ` which we set as a normal string. We can create functions to change the page and dynamically display the page on the screen. For tabbed navigation by default the first tab is selected. The entire page will look like:
+
+```javaScript
+import 'package:flutter/material.dart';
+import 'package:meals/screens/categories.dart';
+import 'package:meals/screens/meals.dart';
+ 
+class TabScreen extends StatefulWidget{
+  const TabScreen({super.key});
+  @override
+  State<TabScreen> createState() {
+    return _TabScreenState();
+  }
+}
+```
+
+```javaScript
+class _TabScreenState extends State<TabScreen> {
+  int _selectedPageIndex = 0;
+ 
+  void _selectPage(int index) {
+    setState(() {
+      _selectedPageIndex = index;
+    });
+  }
+ 
+  @override
+  Widget build(BuildContext context) {
+    Widget activePage = const CategoriesScreen();
+    var activePageTitle = 'Categories';
+    
+    if (_selectedPageIndex == 1) {
+      activePage = MealsScreen(title: 'Favourites', meals: []);
+      activePageTitle = 'Your Favourites';
+    }
+    
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(activePageTitle),
+      ),
+      body: activePage,
+      bottomNavigationBar: BottomNavigationBar(
+        onTap: (index) {
+          _selectPage(index);
+        },
+        items: [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.set_meal),
+            label: 'Categories'
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.star),
+            label: 'Favourites'
+          ),
+        ],
+      ),
+    );
+  }
+}
+```
+
+To change the high lighting of the tab we need to set the `currentIndex` parameter of the `BottomNavigationBa`r widget. like:  
+`currentIndex: _selectedPageIndex`   
+We must make sure that the variable we use is in sync with the screen index.  
+**Even though we can nest Scaffold widgets in flutter it is not recommended.**
+
+We can pass pointers to the function through multiple layers of widgets to manage state. We can define the state and function to modify the state inside of a common parent. Then move it through the constructors of children to use it where ever it is desired. We might need to accept these function pointers as arguments even if we are not using them directly. This can be cumbersome if we are re using components. 
+
+The side drawers are added on a per screen basis which means that we need to add the side drawers needs to be added inside of scaffold. In the `Scaffold` widget we need to add the `drawer` parameter. Apart from that we also have additional parameters inside of the scaffold widget to configure the behavior of the drawer. We need to pass a widget to the drawer argument which needs to be presented as drawer. Flutter has a `Drawer` widget for this, the drawer widget has a lot of parameters that we can use to configure a drawer. The `child` parameter defines the content of the drawer. The drawer widget is optimized to be used as a drawer so it automatically takes the entire screen height.   
+The `DrawerHeader` widget is used to provide the header for a drawer. The drawer header widgets supports parameters like `padding`, `decoration `etc.   
+If there are a lot of elements in the drawer and we need to reuse the drawer it is a good practice to create a separate widget for that. 
+
+```javaScript
+Scaffold(
+      appBar: AppBar(title: Text(activePageTitle)),
+      drawer: MainDrawer(),
+      body: activePage,
+      bottomNavigationBar: BottomNavigationBar(
+        onTap: (index) {
+          _selectPage(index);
+        },
+        currentIndex: _selectedPageIndex,
+        items: [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.set_meal),
+            label: 'Categories',
+          ),
+          BottomNavigationBarItem(icon: Icon(Icons.star), label: 'Favourites'),
+        ],
+      ),
+    );
+```
+
+The above code will add a hamburger menu icon on the appbar. When you tap on the icon it will open the drawer. We can close the drawer by tapping on the background or sliding it in.
+
+`ListTile` widget can be used to display list items. It can be used anywhere inside of a flutter app. We can use this to display links inside of the drawer. The `title` parameter of the list tile widget can be used to set a title for the list. The title parameter expects a widget. We can use any widget such as a text widget. The `leading` parameter of the list tile widget can be used to add content to the beginning of the the row. The list tile widget also has an `onTap` parameter which we can listen to when then the user taps on the list tile. The code will look like:  
+
+```javaScript
+ListTile(
+            leading: Icon(Icons.restaurant, size:26, color: Theme.of(context).colorScheme.onSurface),
+            title: Text('Meals', style: Theme.of(context).textTheme.titleSmall!.copyWith(
+              color: Theme.of(context).colorScheme.onSurface,
+              fontSize: 24,
+            )),
+            onTap: (){},
+          )
+```
+
+We can close the drawer manually by calling `Navigator.of(context).pop();` 
+
+`SwitchListTile` is a special widget which lets you display switches as a list. It will display a label and a tappable switch. It has a `value` parameter which needs to be a boolean value to indicate weather it is on or off. It also has an `onChanged` paramter which accepts a function. This function will be triggered when user taps on the switch. The `title` parameter is used to add a label to the switch. Apart from title we can also set a subtitle using the `subtitle` parameter of the switch list tile widget. The `activeThumbColor` parameter is used to set the color of the switch when it is active. The `contentPadding` parameter is used to set padding for the content of the switch. We can set specific padding to only the selected directions using the `.only()` constructor of `EdgeInsets` class. We can pass the required directions and their values as parameters to this and it will apply the padding to only the specified directions.   
+The below code shows implementation of `SwitchListTile` widget:
+
+```javaScript
+SwitchListTile(value: value, onChanged: onChanged, title: Text('Gluten-Free', style: Theme.of(context).textTheme.titleLarge!.copyWith(
+            color: Theme.of(context).colorScheme.onSurface
+          ),
+          ),
+          subtitle: Text('Only include gluten free meals.',style: Theme.of(context).textTheme.labelMedium!.copyWith(
+            color: Theme.of(context).colorScheme.onSurface
+          ),
+          ),
+          activeThumbColor: Theme.of(context).colorScheme.tertiary,
+          contentPadding: EdgeInsets.only(left: 34, right:22,),
+          )
+```
+
+The method defined for the onChanged parameter will automatically receive the value of switch when it is toggled, so we can accept it into the function as an argument and use it. For example:
+
+```javaScript
+SwitchListTile(
+            value: _glutenFreeFilterSet,
+            onChanged: (isChecked){
+              setState(() {
+                _glutenFreeFilterSet = isChecked;
+              });
+            },
+            ......
+          )
+```
+
+  
+When we opened the drawer and navigate to a different screen, when we press the back button we are taken back to the screen where the drawer is open. Though we can manually close the drawer once we select the option before navigating. Till now we pushed new screens to the screen stack, so when we use the back button it will traditionally simulate the `Navigator.pop()` operation, which will take you back to the previous screen in the stack. This may be the behavior you want in most of the cases. But we can also replace the current active screen with a new screen, this way the back button will not work. We can easily implement this by calling the` pushReplacement()` method on the navigator instead of `.push()` . The code will look like:
+
+```javaScript
+MainDrawer(onSelectScreen: (identifier){
+        Navigator.pop(context);
+        if(identifier == 'meals'){
+          Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (ctx)=>const TabScreen()));
+        }
+      }),
+```
+
+We need to pass the chosen filters from the filters screen to be passed to the tabs screen so that the filters will work. We can use a special widget which we can wrap around the body of the scaffold widget. We can use the **PopScope** widget for this. It requires an **onPopInvokedWithResult** parameter which takes in a function. This function will be invoked when the user tries to leave the screen. This function receives a boolean value **didPop** and a dynamic typed **result** value automatically as parameters. For the PopScope widget we must pass a **canPop** parameter as **false** to prevent the default pop behavior. The **didPop** argument of the callback function indicates whether the pop actually happened. If it's true, we should return early to avoid popping twice. The **result** parameter contains data returned from any screen that was pushed on top of the current screen (not the data we're sending back).
+
+ We can use the **pop()** method of the **Navigator** class inside the callback function to manually pop the screen. The **pop()** method also supports passing data as a parameter, which will be sent back to the previous screen. The previous screen can receive this data using **.then()** or **async/await** when navigating to the filters screen. We can return a map inside of the pop function, these values will will be accessible where the current screen (which we want to exit from) is pushed. Additionally we can check the value of `didPop` to make sure that the code inside of the callback function is not executed twice. The code will look like:  
+`enum Filter { glutenFree, lactoseFree, vegetarian, vegan } `   
+
+```javaScript
+PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (bool didPop, dynamic result) {
+          if (didPop) return;
+          Navigator.of(context).pop({
+            Filter.glutenFree: _glutenFreeFilterSet,
+            Filter.lactoseFree: _lactoseFreeFilterSet,
+            Filter.vegan: _veganFilterSet,
+            Filter.vegetarian: _vegetarianFilterSet,
+          });
+        },
+        child: Column(
+```
+
+**We can make sure that the function will return a future object if we mark the function as async.**
+
+The `push` method returns a `Future` object, till now we have not used this value. But we can use to this get the result from the `PopScope` widget. The push method is a generic type, we can specify the type of data returned from push using the <>. In our case we know that it is a Map so we can specify it. The Map is also a generic type so we should specify the key is an enum of type `Filter` and the value is of type boolean. The code will now look like:
+
+```javaScript
+void _setScreen(String identifier) async {
+    Navigator.of(context).pop();
+    if(identifier == 'filters'){
+      final result = await Navigator.push<Map<Filter, bool>>(context, MaterialPageRoute(builder: (ctx)=>FiltersScreen()));
+      print(result);
+    }else{
+    }
+    
+  }
+```
+
+The ?? operator allows you to set a fallback conditional value in case if the assigned value is null. eg:
+
+```javaScript
+const kInitialFilters = {
+    Filter.glutenFree: false,
+    Filter.lactoseFree: false,
+    Filter.vegan: false,
+    Filter.vegetarian: false,
+  };
+....
+  Map<Filter, bool> _selectedFilters = kInitialFilters;
+setState(() {
+        _selectedFilters = result ?? kInitialFilters;
+      });
+```
+
+We are using this because the result we get from the pop method can be null. To avoid this we are using the special ?? operator so that the fallback value will be used if the value of the result is null.
+
+We cannot access the properties of the Stateful class inside of the class which extends state except inside of the build method. In order to access the state we can override the `initState` method in the class which extends the State class. In our case we are setting the filters from the filters screen which is a stateful widget. After setting the filters and navigating the meals when we come back to the filters screen we are not able to see any filters because we are initializing them as false. For the filters screen we can accept the available filters as an argument to the constructor. Inside of the class which extends the state we can override the `initState` method. Inside of this initState method we can use `wiget.property_name` and access the property. The code will look like:
+
+```javaScript
+class FiltersScreen extends StatefulWidget {
+  const FiltersScreen({super.key, required this.currentFilters});
+  final Map<Filter, bool> currentFilters;
+  @override
+  State<StatefulWidget> createState() {
+    return _FiltersScreenState();
+  }
+}
+class _FiltersScreenState extends State<FiltersScreen> {
+  var _glutenFreeFilterSet = false;
+  var _lactoseFreeFilterSet = false;
+  var _vegetarianFilterSet = false;
+  var _veganFilterSet = false;
+  @override
+  void initState(){
+    super.initState();
+    _glutenFreeFilterSet = widget.currentFilters[Filter.glutenFree]!;
+    _lactoseFreeFilterSet = widget.currentFilters[Filter.lactoseFree]!;
+    _vegetarianFilterSet = widget.currentFilters[Filter.vegetarian]!;
+    _veganFilterSet = widget.currentFilters[Filter.vegan]!;
+  }
+......
+```
