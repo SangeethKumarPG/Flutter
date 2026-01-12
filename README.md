@@ -2502,3 +2502,202 @@ class _FiltersScreenState extends State<FiltersScreen> {
   }
 ......
 ```
+
+We had a bunch of screens we are navigating through. We were passing state modifiers through the widget trees so that the state can be modified from these widgets which are actually independent of each other. This approach is less convenient because as the complexity of the application increases it becomes more cumbersome to manage this. 
+
+We are using the `riverpod` package to solve the above mentioned problem. It is a third party package used for cross widget state management in flutter. There are alternatives to `riverpod` such as `provider` but riverpod is more more modern and a much better version than the provider package. The riverpod makes state management easy for widgets. To install it we need to run:  
+`flutter pub add flutter_riverpod`   
+inside of the root folder of the project.
+
+We create a provider which is an object based on a class provided by the riverpod package. This provider can provide a potentially dynamic value and it can also provide methods that may change the value. In any widget we can set up a consumer that is connected to the provider, which is connected automatically by riverpod. In the consumer we can listen to changes to that provided value or even trigger those changes by calling those methods that are provided by the provider. The idea is that there is a central provider, any widget can set up a consumer. You don't need to pass these cross state management values between those widgets anymore.
+
+To set up a provider we need to create a dart file preferably in a separate folder inside of the lib folder to manage them easily. Then inside of the file we need to import `flutter_riverpod.dart` from `flutter_riverpod` package. We then need to instantiate the `Provider` class into a variable. The provider class constructor takes in a couple of parameters, it least at least one positional function parameter. This function will receive a `ProviderRef` object automatically, because it is called by the flutter\_riverpod package. Inside of the function we should return the value which we want to provide. The example code will look like:
+
+```javaScript
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:meals/data/dummy_data.dart';
+ 
+final mealsProvider = Provider((ref){
+  return dummyMeals;
+});
+```
+
+We can use this provider in any of the widgets.
+
+To use the provider we need to import the dart file to the file where we need the provider. We also need to import the `flutter_riverpod.dart` file from the `flutter_riverpod` package. Then we need to extend the` ConsumerStatefulWidget` class instead of `StatefulWidget`. This class is provided by the riverpod package. If you have a stateless widget we extend the `ConsumerStatelessWidget` insted of `StatelessWidget`. For the class which extends the state we need to extend `ConsumerState` . Also change the return type of `createState` method with `ConsumerState`.(For both widget class and state class we should extend the Consumer classes provider by riverpod). These classes help us to reach out to the providers. The` ref` property helps us to listen to changes of the providers. The `ref` property is available because we are extending ConsumerState class in the state class. We can use utility function of the ref property. The `ref.read() `method is used to get data from provider. 
+
+`ref.watch()` method is used to set up a listener which makes sure that the build method gets executed again once the data changes. The official documentation of riverpod recommends to use `.watch()` function as often as possible even if you need to read the data only once, because by this way we can avoid unintended bugs if we change the logic at a later point in time. The `watch()` function needs a provider as argument. This makes sure that the build method gets re executed when the build method is changed. In addition to the above functionality watch method also returns the data it watches. In addition to this most importantly for the riverpod package to work we need to wrap our main `App()` with `ProviderScope` widget provided by the `flutter_riverpod` package. The provider scope widget takes in a child parameter which is our main entry widget. The code will look like:
+
+```javaScript
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+ 
+void main() {
+  runApp(const ProviderScope(child: App()));
+}
+```
+
+This ensures that all the screens and widgets in the app can access the features provided by the riverpod package. The code will look like:
+
+```javaScript
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:meals/providers/meals_provider.dart';
+class TabScreen extends ConsumerStatefulWidget {
+  const TabScreen({super.key});
+  @override
+  ConsumerState<TabScreen> createState() {
+    return _TabScreenState();
+  }
+}
+ 
+class _TabScreenState extends ConsumerState<TabScreen> {
+......
+Widget build(BuildContext context) {
+    final meals = ref.watch(mealsProvider);
+    final availableMeals = meals.where((meal) {
+.....
+```
+
+By doing the above we are fetching the data through provider.
+
+The above shown method is useful only when you have static data. If you have data that changes frequently the use of `Provider` class is a wrong choice for creating a provider. In those cases we should use the `StateNotifierProvider` class to instantiate the provider object. This is a class available in the same flutter riverpod package which is optimized for data that changes. It needs a `StateNotifier` class which is also provided in the riverpod package. We need to create a class that extends the `StateNotifier` class. You can name this class any way you want but the convention is to provide a name that ends with Notifier. The `StateNotifier` class is a generic class so we should specify the data it handles in between <>. Inside of the class we need to define the initial value and the methods that will help to change the managed data. We can use the initializer list for the constructor to initialize the data. The next step is to add methods to handle the data.
+
+The convention of the riverpod package is that we should not modify the data of the state in memory. Instead we must create a new object to perform the required operations. Let's say we have an empty list initialized for data for the state notifier class. We cannot directly use methods like `.add()` or `.remove()` on this list. We can use the globally available `state` property which is available in the classes which extends the `StateNotifier` class. This property holds the data there also we need to create a new data object and re assign it to the state property.   
+**NOTE**: Only the modification of state is not allowed, we can access items or use methods to check if the items are present or not. For example we can use the `.contains` method on the state property if the state has a list.
+
+We can use the spread operator inside of a list to get all the items of an existing list and add them as individual items of a new list. For example see the function below:
+
+```javaScript
+void toggleMealFavoriteStatus(Meal meal){
+    final mealIsFavorite = state.contains(meal);
+    if(mealIsFavorite){
+      state = state.where((item)=>item.id!=meal.id).toList();
+    }else{
+      state = [...state, meal];
+    }
+  }
+```
+
+Like this we are making changes in the data in an immutable way.   
+The final step is to provide an argument to the `StateNotifierProvider`. It requires a function which automatically gets the `ref` property. Inside this function we should return an instance of our custom notifier class we created. The `StateNotifierProvider` is also a generic type so we need to add the type of data it handles and the type of data it yields. The complete code will look like:
+
+```javaScript
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
+import 'package:meals/models/meal.dart';
+ 
+class FavoriteMealNotifier extends StateNotifier<List<Meal>> {
+  FavoriteMealNotifier() : super([]);
+ 
+  void toggleMealFavoriteStatus(Meal meal) {
+    final mealIsFavorite = state.contains(meal);
+    if (mealIsFavorite) {
+      state = state.where((item) => item.id != meal.id).toList();
+    } else {
+      state = [...state, meal];
+    }
+  }
+}
+ 
+final favoriteMealProvider =
+    StateNotifierProvider<FavoriteMealNotifier, List<Meal>>((ref) {
+      return FavoriteMealNotifier();
+    });
+```
+
+To use this provider we need to import the provide in the specific widget where we need to get the data from the provider. To get the data we can use the `ref.watch()` method inside which we can specify the provider name. The riverpod package automatically extracts the state property value of the notifier class that belongs to the provider. For example:
+
+```javaScript
+ if (_selectedPageIndex == 1) {
+      final favoriteMeals = ref.watch(favoriteMealProvider);
+      activePage = MealsScreen(
+        meals: favoriteMeals,
+        onToggleFavourite: _toggleMealFavouriteStatus,
+      );
+      activePageTitle = 'Your Favourites';
+    }
+```
+
+To modify the data of the state inside of state notifier we must first import the riverpod package in the dart file where we need to modify the data. Then we must extend the `ConsumerWidget` instead of `StatelessWidget`. Then we must also accept the `ref` argument of type `WidgetRef` argument for the build method inside of the widget. This is not required in stateful widgets. Then we need to use the `ref.read()` method to access the provider. To this function we should pass the provider name as argument. On the provider object we can access the `notifier` property. We can then access the required method of the notifier class. The code will look like:
+
+```javaScript
+IconButton(onPressed: (){
+          ref.read(favoriteMealProvider.notifier).toggleMealFavoriteStatus(meal);
+        }
+```
+
+We can also access the value if the method in the notifier class returns a value.
+
+We can create providers that depends upon other providers. Like we did for favorite meals we can create a provider for filter by creating a StateNotifier class. This class will accept a map of Filters and the status of filters which is a boolean. Inside of this class we can use the initializer list for the constructor to set all the filter values to false. Also we need to create a method to mutate the state. For this we can also use the spread operator to copy the map from the existing state and override the value of a filter if necessary. The code will look like:
+
+```javaScript
+import 'package:flutter_riverpod/legacy.dart';
+ 
+enum Filter { glutenFree, lactoseFree, vegetarian, vegan }
+ 
+class FiltersNotifier extends StateNotifier<Map<Filter, bool>>{
+  FiltersNotifier():super({
+    Filter.glutenFree: false,
+    Filter.lactoseFree: false,
+    Filter.vegan: false,
+    Filter.vegetarian: false,
+  });
+ 
+  void setFilter(Filter filter, bool isActive){
+    state = {
+      ...state,
+      filter: isActive,
+    };
+  }
+}
+ 
+final filtersProvider = StateNotifierProvider<FiltersNotifier,Map<Filter, bool>>((ref)=>FiltersNotifier());
+```
+
+After this we can use this provider where we want to modify the state. We should also extend the `ConsumerStatefulWidget` instead of `StatelefulWidget`. Then we need the extend `ConsumerState` instead of `State`.
+
+We can use the `ref.read()` method when we only want to read the data from the provider only once without setting up a listener. We can also use read method to trigger methods that modify the state. For example:
+
+```javaScript
+ void initState(){
+    super.initState();
+    final activeFilters = ref.read(filtersProvider);
+    _glutenFreeFilterSet = activeFilters[Filter.glutenFree]!;
+    _lactoseFreeFilterSet = activeFilters[Filter.lactoseFree]!;
+    _vegetarianFilterSet = activeFilters[Filter.vegetarian]!;
+    _veganFilterSet = activeFilters[Filter.vegan]!;
+  }
+```
+
+In this initState method we can use the read method to fetch the data initially which happens only once. In such cases we need to manually manage the state inside of class itself if we want to rebuild the widget if the data changes.
+
+Alternatively we can turn the entire stateful widget to stateless widget and manage the state using the data from the provider. This makes the widget classes more leaner and avoid local initialization and management of state.
+
+You can create multiple providers in the same file. This let's you group dependent providers in a single file. For example if we are creating a simple provider we will get the `ref` property automatically as argument to the anonymous function. We can use this ref property same as we used it inside of the widgets. We can call methods like `read()`, `watch()` etc on this method. Like this we can connect one provider to another provider. When use the watch method inside of the function of the provider when ever the value we are watching changes, riverpod will automatically re-execute that function. Any of the widgets which are listening to the provider will also update when the data from the dependent provider changes. The example will look like:
+
+```javaScript
+final filteredMealsProvider = Provider((ref){
+  final meals = ref.watch(mealsProvider);
+  final activeFilters = ref.watch(filtersProvider);
+  return meals.where((meal) {
+      if (activeFilters[Filter.glutenFree]! && !meal.isGlutenFree) {
+        return false;
+      }
+      if (activeFilters[Filter.lactoseFree]! && !meal.isLactoseFree) {
+        return false;
+      }
+      if (activeFilters[Filter.vegan]! && !meal.isVegan) {
+        return false;
+      }
+      if (activeFilters[Filter.vegetarian]! && !meal.isVegetarian) {
+        return false;
+      }
+      return true;
+    }).toList();
+});
+```
+
+The `filteredMealsProvider` is dependent on both `mealsProvider` and `filtersProvider`. This way if any changes to either of these states occur the widgets where we used the `filteredMealsProvider` will be re build.
+
+We can get the data from this provider by using the `watch` method inside of the build method like:  
+` final availableMeals = ref.watch(filteredMealsProvider);` 
