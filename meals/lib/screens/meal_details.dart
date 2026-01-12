@@ -1,20 +1,37 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meals/models/meal.dart';
 import 'package:transparent_image/transparent_image.dart';
+import 'package:meals/providers/favorites_provider.dart';
 
-class MealDetails extends StatelessWidget {
-  const MealDetails({super.key, required this.meal, required this.onToggleFavourite});
+class MealDetails extends ConsumerWidget {
+  const MealDetails({super.key, required this.meal});
   final Meal meal;
-  final void Function(Meal meal) onToggleFavourite;
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final favoriteMeals = ref.watch(favoriteMealProvider);
+    final bool isFavorite = favoriteMeals.contains(meal);
     return Scaffold(
-      appBar: AppBar(title: Text(meal.title),
-      actions: [
-        IconButton(onPressed: (){
-          onToggleFavourite(meal);
-        }, icon: Icon(Icons.star))
-      ],
+      appBar: AppBar(
+        title: Text(meal.title),
+        actions: [
+          IconButton(
+            onPressed: () {
+              final wasAdded = ref
+                  .read(favoriteMealProvider.notifier)
+                  .toggleMealFavoriteStatus(meal);
+              ScaffoldMessenger.of(context).clearSnackBars();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    wasAdded ? 'Meal addedd as favorite' : 'Meal removed.',
+                  ),
+                ),
+              );
+            },
+            icon: isFavorite? Icon(Icons.star): Icon(Icons.star_border),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -53,7 +70,10 @@ class MealDetails extends StatelessWidget {
             const SizedBox(height: 14),
             for (final step in meal.steps)
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 16,
+                ),
                 child: Text(
                   step,
                   textAlign: TextAlign.center,
