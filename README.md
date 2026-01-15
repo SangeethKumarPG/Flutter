@@ -2701,3 +2701,181 @@ The `filteredMealsProvider` is dependent on both `mealsProvider` and `filtersPro
 
 We can get the data from this provider by using the `watch` method inside of the build method like:  
 ` final availableMeals = ref.watch(filteredMealsProvider);` 
+
+There are 2 types of animations in flutter, **explicit** and **implicit** animations. For the explicit animation you build and control the entire animation, you have detailed control over it's configuration, it is more complex to implement. For implicit animation flutter controls the animation, and does a lot of work for you, it offers less control and is less complex to manage. Explicit animations can be avoided by using pre build animation widgets. 
+
+When you are creating an explicit animation to a widget you must ensure that the widget is a `StatefulWidget`. Because we will be working with a state object, because behind the scenes an animation sets the state and updates and updates the UI as long as the animation is playing. We should create a property called `animationController` inside of the state class. In this property we are going to store a value of type `AnimationController`. We cannot create the animation controller where the property is initialized. We should use `initState` method for that. Inside of the initState method we can create the animationController. The animationController must be set before the build method executes. To tell dart that this property doesn't have a value initially when the class is created, but will have one when it is really needed you can use the special `**late**` keyword in front of the animation controller. You should make sure that the type of the property should be specified after late keyword.
+
+Eg:  
+` late AnimationController _animationController;`   
+`AnimationController `class is provided by flutter. Inside of the initState method we can initialize the animationController object with the `AnimationController `class. The constructor function provides a lot of configuration options. There are some essential properties we should use:  
+**1.** **vsync**: It requires a `TickerProvider` . vsync parameter is responsible for executing the animation for every frame, to provide a smooth animation. When using the `TickerProvider `we should use the `with `keyword before the opening brace of the class. This is a special feature of dart called `mixin`. mixin's can be thought of another class merged into this class behind the scenes to offer additional functionality. Along with the `with `keyword you should also add the class you need to merge with the current class. For the `TickerProvider `we should add `SingleTickerProviderStateMixin ` which is provided by flutter. 
+
+If you have multiple animation controllers for different animations in a screen, we should add `TickerProviderStateMixin`. After adding the mixin class we should pass the `this `keyword as value for the `vsync `property. 
+
+**2.** **duration :** This controls the duration of the animation you want to play. To add value to this property we can use the `Duration `class constructor to create a duration object. Normally we pass the `milliseconds `property of the duration class to set the animation duration. 
+
+**3\. lowerBound:** Defines the minimum value of the animation (default is 0.0). Rarely needs to be changed.
+
+**4\. upperBound:** Defines the maximum value of the animation (default is 1.0). Rarely needs to be changed.  
+With animation you always animate between 2 values. We use these values to make the changes appear on the screen. For example you can add some margin or padding to a widget and that margin and padding could be based on current animation value which we set using the bounds. 
+
+You should also add an override to the `dispose `method to dispose the `animationController `object. Inside the method you should call the` .dispose()` function The dispose method ensures that the animation controller is removed from memory once the widget is removed from the screen. The code till now will look like:
+
+```javaScript
+class _CategoriesScreenState extends State<CategoriesScreen>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+      lowerBound: 0,
+      upperBound: 1,
+    );
+  }
+ 
+  @override
+  void dispose(){
+    _animationController.dispose();
+    super.dispose();
+  }
+........
+```
+
+  
+The `animationController `does not cause the execution of build method for every frame. It can be thought of as a timer or an interval running behind the scenes to which we can listen and manually update the UI. We can listen and update parts of the UI using `AnimatedBuilder `widget provided by flutter. It requires an `animation `and a `builder`, as argument. animation requires a `Listenable `object. The `animationController `we created is such a Listenable object. The `animationController `object that we passed will determine when the builder method of the `AnimatedBuilder `will be called. We can return the widgets of the page inside the anonymous function of the builder. This anonymous function will also receive the `context `and a `widget`. This widget is an extra widget which we could add on animation builder to set any widget that should be shown as part of the animated content but that should not be animated themselves. This helps in improving the performance of the animation by making sure that
+
+not all the items that are part of the animated item are rebuilt and reevaluated as long as animation is running. The widgets we return inside of the builder method is reevaluated and rebuilt. For example if we only want to set an animation for the padding for a screen. We can set the entire widget tree of the screen as child. We can reuse this child inside of the builder method and set the child of padding as the child we defined. To dynamically set the padding we can access the `value` property of `animationController` which will dynamically update to change the padding dynamically.   
+Defining the animation and configuring it is not enough to start the animation we need to manually start the animation from the code. We can use the `.forward()` method of the animation controller to start the animation. We can use the `.stop()` method of the animation controller to stop the animation. 
+
+Since we want to start the animation when the widget is loaded we can place the forward method inside of `initState`. We can also use `repeat()` instead of forward to repeat the animation after it is stopped. Initially the value of the animation controller will be 0 by default. It will slowly increment to 1 by the duration we specified. So we can utilize this to set the padding top of the widget. We can set the padding top as an expression where we subtract the multiple of 100 and the value of `animationController `from 100\. So initially the padding will be 100, then finally at the end of the animation it will be 0\. This will create a smooth slide in from the bottom animation the entire code for the categories screen will look like:
+
+```javaScript
+class _CategoriesScreenState extends State<CategoriesScreen>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+      lowerBound: 0,
+      upperBound: 1,
+    );
+ 
+    _animationController.forward();
+  }
+ 
+  @override
+  void dispose(){
+    _animationController.dispose();
+    super.dispose();
+  }
+@override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _animationController,
+      child: GridView(
+........................
+),
+      builder:(context, child) => Padding(padding: EdgeInsets.only(top:100 - _animationController.value * 100),child: child,),
+    );
+  }
+}
+```
+
+The above method works but there is a better alternative way. Instead of manually adjusting the padding we can use a Transition widget which is already present in flutter. We can use the `SlideTransition `to move the widget from one position to another. It requires a `child `parameter which specifies the child that should be animated. The `position `parameter is also required, it is not a number but an an animation that animates an offset. The animation is what we get using the `animationController ` , the offset is a special kind of value used by flutter to describe the amount of offset of an element from the actual position it would normally take. We can use the `.drive() `method of the `animationController `object to create an animation based on some other value, i.e between 2 offsets based on the values from the animation controller(`lowerBound `and `upperBound`). For this the drive() method requires an `Animatable `child such a child can be built using the flutter's `Tween()` class constructor. 
+
+The tween class creates tween objects, the name tween means between because this class and the objects are all about animating(defining the transition) between two values. It takes in `begin `and `end `as arguments. These requires an `Offset `object. We can create such an offset object using it's class, it takes in 2 numbers with decimal places (doubles) the first number defines the offset on x axis and the second number defines the offset on y axis. The value 0 indicates that there is no offset, and the value 1 indicates that there is 100% offset. So for the same slide in from bottom we can set the begin offset of y axis to a value greater than 0 and less than 1, and for the end we want the child widget to return to the original position in the screen this can be done by setting both offsets of the end to 0\. The code will be like:
+
+  
+```javaScript
+builder:(context, child) => SlideTransition(position: _animationController.drive(
+        Tween(
+          begin: Offset(0, 0.3),
+          end: Offset(0, 0)
+        )
+      ), child: child,)
+```
+
+The change is only for the builder method, everything from the previous example remains the same.  
+ The approach is much more optimized and it gives us some extra features and capabilities.   
+The Tween object also has an `animate `method. We can use this to entire replace the `drive `method with the Tween because the `animate `method returns an animation object. The animate takes in an argument which we can use to get more control over how the animation is played back. We can use built-in animation functions like `CurvedAnimation ` . `CurvedAnimation `is a configuration object for creating such animation with the help of `animate `method. 
+
+`CurvedAnimation `takes in a `parent `attribute to which we can pass in our `animationController `object. It also requires a `curve `parameter which is a `Curve `object. We don't need to manually create this object because flutter has a Curves class in which there are multiple predefined animation curves. We can access the by using the `.`operator. These curves controls how the transition is applied between the begin and end state over the available animation time. This gives us more control over how the animation feels. The modified builder method will like:
+
+```javaScript
+builder:(context, child) => SlideTransition(position: Tween(
+          begin: Offset(0, 0.3),
+          end: Offset(0, 0)
+        ).animate(
+          CurvedAnimation(parent: _animationController, curve: Curves.easeInOut)
+        ), child: child,),
+```
+
+This makes the animations look more natural.
+
+Implicit animations are the animations which can be used by using built in widgets of flutter. For most of the animations we want to use pre built animations are the better choice. The implicit animations are easier to use. Most of the implicit animations can be used as widgets. So where ever you can use widgets we can use implicit animations. For example if we want a spin animation on an icon button which changes the icon upon clicking we can use the `AnimatedSwitcher()` . The `child `property of this widget is widget we want to animate. The `duration `defines the duration of the animation. The duration can be set using the `Duration `class. It has the `transitionBuilder `argument it needs a function which receives a widget and an animation which are provided automatically by flutter. Here you don't need to manually create animations instead the `AnimatedSwitcher `will automatically create one for you behind the scenes. It will automatically create the animation and start the animation.
+
+It will start the animation whenever the child changes(updates). Thus the name implicit animations make sense; you don't need to manually create, configure and start the animation. The builder function should return a Transition widget. These transition widgets determine how we want to animate. In our case we want to rotate the icon so we can use the `RotaionTransition `widget. It requires a `turns `parameter. `turns `is an animation, since we are automatically getting an animation we can use the same animation parameter that we received through the builder function. It also requires a `child `parameter which is a widget, similar to the animation we are also getting the child so we can similarly pass that child. The child we are getting is from the child we defined for the `AnimatedSwitcher`. The example code will look like:  
+
+```javaScript
+icon: AnimatedSwitcher(
+              duration: Duration(milliseconds: 300),
+              transitionBuilder: (child, animation){
+                return RotationTransition(turns: animation, child: child,);
+              },
+              child: isFavorite ? Icon(Icons.star) : Icon(Icons.star_border),
+            )
+```
+
+The above code is not enough for the animation to be visible on the screen, because right now flutter cannot detect any changes that happened. It treats the code simply as a widget itself. To make sure that the flutter is aware of the changes we need to add a key parameter, this makes flutter take into account if we have a different widget(data changed) than before. We can add a `ValueKey `based on the boolean value of `isFavorite` to the child. This will trigger the animation. We can also configure the animation manually by passing the `Tween` object for the turns value. This helps you override the default bound values. We can set the `begin `and `end `values to 0.5 and 1.0 and then call the animate method on the tween object. Since we know that this method requires an animation object, we can pass the same animation object we received through the builder method argument. The code will look like:
+
+```javaScript
+icon: AnimatedSwitcher(
+              duration: Duration(milliseconds: 300),
+              transitionBuilder: (child, animation) {
+                return RotationTransition(turns: Tween(begin: 0.8, end:1.0).animate(animation), child: child);
+              },
+              child: Icon(
+                isFavorite ? Icons.star : Icons.star_border_outlined,
+                key: ValueKey(isFavorite),
+              ),
+            ),
+```
+
+We used animated switcher here because we are transition between 2 values. We can use any of the animated widgets provided by flutter. 
+
+We can also animate across multiple screens. Flutter has built-in support for animation widgets across multiple screens. For example we can transition an image across multiple screens in our case when we select the meal image on the meals screen we can create a smooth transition animation which will display the same image in the meal details screen. For this we can wrap our `FadeInImage `widget with `Hero `widget which is build into flutter. This widgets helps to animate across different screens (or widgets). It requires a `child `which is the widget we want to transition. It also needs a `tag ` which will in identifying the widget on this screen and target screen. The tag should be unique for every widget. For our case we can use the `meal.id` which is unique for each meal. Then go to the place where we want to animate to (there must be a logical connection) go the widget where we want to animate and wrap it with `Hero `and give it the same `tag`. The code will look like:
+
+```javaScript
+Hero(
+              tag: meal.id,
+              child: FadeInImage(
+                placeholder: MemoryImage(kTransparentImage),
+                image: NetworkImage(meal.imageUrl),
+                fit: BoxFit.cover,
+                height: 200,
+                width: double.infinity,
+              ),
+            ),
+```
+
+For the source, and for the target:
+
+```javaScript
+Hero(
+              tag: meal.id,
+              child: FadeInImage(
+                placeholder: MemoryImage(kTransparentImage),
+                image: NetworkImage(meal.imageUrl),
+                width: double.infinity,
+                height: 300,
+                fit: BoxFit.cover,
+              ),
+            ),
+```
