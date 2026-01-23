@@ -2879,3 +2879,129 @@ Hero(
               ),
             ),
 ```
+
+A form is a combination of input fields. There is a built in `Form `widget in flutter. We don't need to use a form widget to display the input fields in a flutter application. But Form widget is useful when handling the input data, validating inputs and displaying on screen validation error messages. The `Form `widget requires a `child `parameter which determines the items displayed in the form. Here we can use any widget in flutter. When using the `Form `widget we should use the `TextFormField `widget instead of `TextField `widget. This widget integrates with the form widget and uses a set of features utilized by forms. Most of the input widgets have compatible form widgets. For these form widgets all the native parameters are available such as `maxLength`, `decoration `etc. The `TextFormField `has a `validator `parameter which let's you to call a function to validate the input. It will take a string value as input which is provided automatically by flutter. 
+
+The function will also return a string value which is set by the user. We can manually set when we should call the function and validate the form. If you return an error message inside of this function flutter will automatically display the value on screen when the validation fails. The code will look like:
+
+```javaScript
+Form(child: Column(
+      children: [
+        TextFormField(
+          maxLength: 50,
+          decoration: InputDecoration(label: const Text('Name')),
+          validator: (value){
+            return 'Demo';
+          },
+        )
+      ],
+    )
+```
+
+The `TextFormField `have additional parameters like `initialValue `which can be used to setup an initial value to the input field inside of the form which is not available in regular text field. The initial value should be set as string.
+
+The `DropdownButtonFormField `is the form widget for `DropdownButton `widget. It supports form specific features. The existing features of the drop down button widget will also be available. We can use the `.entries` attribute on a map to convert it into an iterable thus we can loop over it using for loop. From the iterable we can access the key and value using the dot operator. The `DropdownMenuItem `widget is still used for adding items to the `DropdownButtonFormField `widget. The code will look like:  
+
+```javaScript
+Expanded(
+  child: DropdownButtonFormField(
+    onChanged: (value) {},
+    items: [
+      for (final category in categories.entries)
+        DropdownMenuItem(
+          value: category.value,
+          child: Row(
+            children: [
+              Container(
+                width: 16,
+                height: 16,
+                color: category.value.color,
+              ),
+              const SizedBox(width: 6),
+              Text(category.value.title),
+            ],
+          ),
+        ),
+    ],
+  ),
+),
+```
+
+When using the `DropdownButtonFormField `widget the selected item will automatically get displayed as the selected value which was not the case with normal `DropdownButton` . But it will not have an item selected initially.
+
+We can define the logic in the validator function such that it will return an error message if validation failed and return null if the validation succeeds. The example will look like:
+
+```javaScript
+TextFormField(
+                maxLength: 50,
+                decoration: InputDecoration(label: const Text('Name')),
+                validator: (value) {
+                  if(value == null || value.isEmpty || value.trim().length <= 1 || value.trim().length > 50){
+                    return 'Must be between 1 and 50 characters.';
+                  }
+                  return null;
+                },
+              ),
+```
+
+  
+Flutter has a built in `tryParse `method in the `int `class which checks if the given string can be converted to integer. If it fails it will return null. Otherwise it will return the converted value. The example code will look like:
+
+```javaScript
+TextFormField(
+  decoration: InputDecoration(
+    label: const Text('Quantity'),
+  ),
+  initialValue: '1',
+  validator: (value) {
+    if (value == null ||
+        value.isEmpty ||
+        int.tryParse(value) == null ||
+        int.tryParse(value)! <= 0) {
+      return 'Must be a valid positive number.';
+    }
+    return null;
+  },
+)
+```
+
+We can also set a validator for `DropdownButtonFormField `widget.
+
+We can execute all the validator functions of a form when submitting the form. This is done with the help of the `key `parameter. This key parameter is not like the key we have used before. We should create a variable and initialize it with the `GlobalKey()` constructor. This object can be used for the value of the key for the form widget. The GlobalKey constructor gives easy access to underlying widget to which it is connected. It also makes sure that the build method is executed. The Form widget manages the internal state by itself. The internal state helps us to show validation errors on screen. You will only need a `GlobalKey `to work with forms in flutter. We can use this global key to get access to that form. `GlobalKey `is a generic type so we need to set the type annotation. We will use the `FormState `as the key handles the state of the form widget.
+
+We can access the validator functions from forms by using the formkey object and accessing the `currentState `property on which we can call the validators. We need to explicitly tell dart that the `currentState `will not be null by adding an exclamation mark. We can call the `validate()` method which is a built in method provided by the form widget. It will return a boolean value. If all the validator functions pass it will return true, if at-least one fails it will return false. The code will look like:
+
+```javaScript
+final _formKey = GlobalKey<FormState>();
+  void _saveItems(){
+    _formKey.currentState!.validate();
+  }
+Form(
+          key: _formKey,
+          child: Column(
+            children: [
+.............
+Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(onPressed: () {}, child: Text('Reset')),
+                  ElevatedButton(onPressed: _saveItems, child: Text('Add Item')),
+                ],
+              ),
+            ],
+          ),
+        ),
+```
+
+To change the keyboard of an input field we can add the `keyboardType `parameter. If we want only numbers input we can use `TextInputType.number` as value of this parameter.   
+We can also use the formKey object to reset the form. We call the `reset() `method on the `currentState `object to reset the form fields. Example:
+
+```javaScript
+TextButton(onPressed: () {
+                    _formKey.currentState!.reset();
+                  }, child: Text('Reset')),
+```
+
+To save the form we can call the `save()` method on the `currentState` object of the `formKey `object. When you call the save method it will trigger a the `onSaved `function on all the form fields. It is a function which gets the entered value of the field automatically as argument. This value will be the value at the point when save method is executed. We can set this value to a variable if we want. We must add an exclamation mark to indicate that the value will not be null or alternatively we can check if the value is null. The cleanest method will be to first validate the form and then call the save method to save the data. We don't need to use the `setState `method when saving the value to a variable because we don't need to update the UI. 
+
+The `DropdownButtonFormField `has an `initialValue `parameter which we can use it to set an initial value to the dropdown. We can set the initial value of the drop down to a variable which is initialized with a value. Then we can use the `onChanged `method to set the value of the field when user selects a different option from dropdown by setting the value of the this variable. Note that we need to use the `setState `method so that we the changes are in sync. We can also use the `onSaved `parameter to save the value of the drop down form field but since we are using the `onChanged `method it is not required.
