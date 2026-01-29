@@ -3005,3 +3005,321 @@ TextButton(onPressed: () {
 To save the form we can call the `save()` method on the `currentState` object of the `formKey `object. When you call the save method it will trigger a the `onSaved `function on all the form fields. It is a function which gets the entered value of the field automatically as argument. This value will be the value at the point when save method is executed. We can set this value to a variable if we want. We must add an exclamation mark to indicate that the value will not be null or alternatively we can check if the value is null. The cleanest method will be to first validate the form and then call the save method to save the data. We don't need to use the `setState `method when saving the value to a variable because we don't need to update the UI. 
 
 The `DropdownButtonFormField `has an `initialValue `parameter which we can use it to set an initial value to the dropdown. We can set the initial value of the drop down to a variable which is initialized with a value. Then we can use the `onChanged `method to set the value of the field when user selects a different option from dropdown by setting the value of the this variable. Note that we need to use the `setState `method so that we the changes are in sync. We can also use the `onSaved `parameter to save the value of the drop down form field but since we are using the `onChanged `method it is not required.
+
+Flutter applications run locally on the users device. If the device is lost or the data is erased all the data associated with the app will be gone. Other users have no access to the data stored in users phone. A backend server can help in solving this problem. The data is stored by the backend server in a central remote place like a SQL database. App users from the entire world can access this data since it is stored centrally. The backend server and the application communicate over http requests.
+
+We can use firebase as a dummy third party backend. It is a service offered by google. It has a combination of services and database features that you can easily use and which you can get started for free if you have a google account. After logging in with the google account we should go the firebase console and create a new project by giving it a name. Firebase has many services which we can use. In order to send http requests we should use the real-time database service from the left side tab. This service lets you store firebase managed data in the database as well as provide url to access and modify the data by using http requests. The api documentation can found by searching _firebase realtime database_ rest in google. 
+
+Click on the create database option and choose a region. Then in the next tab choose start in test mode, this ensures that you are able to send data and get data from this API without any issues. If you are using this for a real app you should select start in locked mode.
+
+To make http requests from flutter application we need to install the http package. We can get the command to install this package from pub.dev. The command is:  
+`flutter pub add http` 
+
+After installing we can import the `http.dart` from `http `package. We can also add aliases to imports for example we can add an alias to the http package like:  
+`import 'package:http/http.dart' as http;`   
+All the functionalities of the the package can be accessed using this object/alias. We can use any name of our choice for an alias. 
+
+We can use this `http `alias to access methods defined in this package. If we want to add new data we should send a post request to the backend. To send a post request we can use a `post `method of http package. The post method accepts multiple arguments. It always wants a `url` which is of type `Uri ` . It also accepts a map of `headers`. It has the `body `parameter which is the data we want to send to the server. We can create a url by using the `Uri `class which is a built in class in dart. It has many constructors to create different types of uri's . We are interested in the `https `constructor. Inside this constructor we should paste the url of the firebase realtime database server's url inside of single quotes without using the https://. Apart from this we need to add the path as the second argument. In case of firebase we can set any name for this path we want but make sure that we use `.json` at the end of the path name. The path name also should be in single quote. 
+
+  
+This will create a subfolder (node) in the database with the name specified. The code will be like:  
+` final url = Uri.https('xxxx-xxxxxx-xexxcxx-xxxx-rtdb.firebaseio.com', 'shopping-list.json'); ` 
+
+After the above step we can pass this object as url for the post method. For post method we should pass the headers. In the headers map we should pass `'Content-Type':'application/json'` . We need to send the `GroceryItem `object to the database in a json format, but currently it a dart object. So we need to convert it into a json object. We can do that by using dart's built in convert module. We must first import   
+`import 'dart:convert';` 
+
+We can the use the `encode()` method of the `json` class of the convert package to convert the dart object to json text. We should define the structure of the json object using a map. Inside this map we should specify the key as string and the values are dart objects. In the case of our grocery item we should just store the title of the category object. 
+
+We don't need to send the id because firebase will automatically generate a unique id. The complete code will look like:
+
+```javaScript
+import 'dart:convert';
+ 
+import 'package:http/http.dart' as http;
+........
+final url = Uri.https('xxxxx-xxxxx-xxxxx-default-rtdb.firebaseio.com', 'shopping-list.json');
+      http.post(url, headers: {
+        'Content-Type': 'application/json'
+      },
+      body: json.encode({
+        'name': _enteredName,
+        'qunatity':_enteredQuantity,
+        'category': _selectedCategory.title
+      })
+      );
+```
+
+When sending http requests they might take some time to complete. We should make sure to handle the response from the http server and make sure that our request was successful. In our case we must make sure that the data is sent successfully to firebase before loading it to our application screen of shopping list. The post method of the http package returns a `Future Response `object. We can access this data in 2 ways:
+
+1\. Chaining the `.then` method: We can chain the `.then() `method to the post method. It takes in a function which automatically gets the response. We can then work with that response. eg:
+
+```javaScript
+http.post(
+.......
+).then((response){
+    //work with the response
+});
+```
+
+2\. Using the `async await `: We can mark the function which calls the http method into an `async `function, then we can `await `the call of the http method. Once the call is completed the response can be accessed from the object. This method is much more convenient. The code will look like:
+
+```javaScript
+void _saveItems() async {
+    if (_formKey.currentState!.validate()) {
+      _formKey.currentState!.save();
+      final url = Uri.https('xxxxx-xxxxx-xxxx-default-rtdb.firebaseio.com', 'shopping-list.json');
+      final response = await http.post(url, headers: {
+        'Content-Type': 'application/json'
+      },
+      body: json.encode({
+        'name': _enteredName,
+        'qunatity':_enteredQuantity,
+        'category': _selectedCategory.title
+      })
+      );
+      
+      // Navigator.of(context).pop(
+      //   GroceryItem(id: DateTime.now().toString(), name: _enteredName, quantity: _enteredQuantity, category: _selectedCategory)
+      // );
+    }
+  }
+```
+
+There are some built in properties on the response object, for example we have the `statusCode `property which gives the http status code. We can use this to check weather the request was successful or not. We can also get the response data from the `body `property of the response object. The response data will be in json format, we can easily convert it into a Map in dart. 
+
+When we want to navigate to a different screen from the method where we send the http request we should make sure that the context is still available. Because the user might already try to navigate away from the current screen. We must check if the context is part of the current screen from which the wants to navigate away from. This can be done by checking if the `mounted `property of the `context `object. It is a boolean value which returns true if it is still part of the screen. The code will look like:
+
+```javaScript
+void _saveItems() async {
+    if (_formKey.currentState!.validate()) {
+      _formKey.currentState!.save();
+      final url = Uri.https('xxxxx-xxxxxx-xxxxx-default-rtdb.firebaseio.com', 'shopping-list.json');
+      final response = await http.post(url, headers: {
+        'Content-Type': 'application/json'
+      },
+      body: json.encode({
+        'name': _enteredName,
+        'qunatity':_enteredQuantity,
+        'category': _selectedCategory.title
+      })
+      );
+      print(response.body);
+      if (!context.mounted) return;
+      Navigator.of(context).pop();
+      // Navigator.of(context).pop(
+      //   GroceryItem(id: DateTime.now().toString(), name: _enteredName, quantity: _enteredQuantity, category: _selectedCategory)
+      // );
+    }
+  }
+```
+
+By doing this we made sure that the added data will be available on the grocery list screen.
+
+We can send the get request to an endpoint by using the `get `method of the http package. We also need to create a url object and pass it to the get method. The get method does not have a body, so we can leave them blank. If we have headers we can also send them if we want. We can create a function to send an http get request like:
+
+```javaScript
+void _loadItems() async {
+    final url = Uri.https(
+      'xxxxx-xxxxx-xxxxx-default-rtdb.firebaseio.com',
+      'shopping-list.json',
+    );
+    final response = await http.get(url);
+  }
+```
+
+We can call this function when we need to load the items to the screen. It should fetch new items when the screen is loaded initially and when new items are added. Since this is a void method we don't need to await it when calling it. For example in the `initState `method it can be used like:
+
+```javaScript
+@override
+  void initState() {
+    super.initState();
+    _loadItems();
+  }
+```
+
+We also don't need to mark it as async.
+
+We can call the `.entries` property on a Map to convert it into an **iterable of MapEntry objects**, where each MapEntry contains a key-value pair. We can then use methods of iterable to perform searching on this. For example we can use the `firstWhere()` method to search the first occurrence of an item and return it. It is similar to where but it only returns the first matching item. The complete code will look like:
+
+```javaScript
+void _loadItems() async {
+    final url = Uri.https(
+      'xxxxx-xxxxxx-xxxxx-default-rtdb.firebaseio.com',
+      'shopping-list.json',
+    );
+    final response = await http.get(url);
+    final Map<String, dynamic> listData = json.decode(response.body);
+    final List<GroceryItem> loadedItems = [];
+    for(final item in listData.entries){
+      final category = categories.entries.firstWhere((catItems)=>catItems.value.title==item.value['category']).value;
+      loadedItems.add(GroceryItem(
+        id: item.key,
+        name: item.value['name'],
+        quantity: item.value['qunatity'],
+        category: category,
+      ));
+    }
+    setState(() {
+      _groceryItems = loadedItems;
+    });
+  }
+```
+
+We should reduce the number of api calls we make inside of an application. In our case we are again fetching the data after a new item is added. This is un necessary because when we add a new item to the firebase we will automatically get the id. We can use this id and the already entered data to create a new item and add it to our list. This avoids an un necessary call. The code will be:
+
+```javaScript
+ final Map<String, dynamic> resData = json.decode(response.body);
+ 
+      if (!context.mounted) return;
+      Navigator.of(context).pop(
+        GroceryItem(
+          id: resData['name'],
+          name: _enteredName,
+          quantity: _enteredQuantity,
+          category: _selectedCategory,
+        ),
+      );
+```
+
+It is a good practice to add loading spinner when you are waiting the response from an api. We can display the spinner like:
+
+```javaScript
+if (_isLoading) {
+      content = const Center(child: CircularProgressIndicator());
+    }
+```
+
+It is also a good idea to show a spinner when a post request is made because, the api may take a second or two to add the data and send the response. During this time the user may again send the data by interacting with the UI. This may cause issues. To avoid this we can also show a loader when data is added additional to the spinner being shown when data is fetched.   
+We can disable a button by passing `null `to `onPressed `parameter. Eg:
+
+```javaScript
+ElevatedButton(
+                    onPressed: _isSending ? null : _saveItems,
+                    child: Text('Add Item'),
+                  )
+```
+
+We can also show the spinner on buttons. Example:
+
+```javaScript
+ ElevatedButton(
+                    onPressed: _isSending ? null : _saveItems,
+                    child: _isSending? const SizedBox(height: 16, width: 16,child: CircularProgressIndicator(),) : const Text('Add Item'),
+                  ),
+```
+
+When sending http requests we must also handle situations where the server might fail or send a failure response. We can check the `statusCode `parameter of the response and check if it is a failure or not. You can check of individual errors or a range of failures. if the `statusCode `value is greater than `400 `it is surely an error. 
+
+In firebase if we want to delete a record we need to pass the id of the item which we want to delete in the url. We can append the id at the end of the file name like:
+
+```javaScript
+final url = Uri.https(
+      'xxxxx-xxxxx-xxxxxx-default-rtdb.firebaseio.com',
+      'shopping-list/${item.id}.json',
+    );
+```
+
+and call the delete method on this url. The `delete `method of the http class supports a body but here we don't need that. We can wrap the function which contains the delete call with async await but here it is not required since we are fine with the delete happening in the background and the `setState `method instantly removes the data locally and updates the UI. But it is necessary to check for the errors in the api call and handle it so we can wrap it in async await. So the function will look like:
+
+```javaScript
+void _removeItem(GroceryItem item) async {
+    final index = _groceryItems.indexOf(item);
+    final url = Uri.https(
+      'xxxx-xxxxx-xxcxx8x-default-rtdb.firebaseio.com',
+      'shopping-list/${item.id}.json',
+    );
+    final response = await http.delete(url);
+    if(response.statusCode >= 400){
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Deleting item failed!'),duration: Duration(milliseconds: 300),));
+      setState(() {
+        _groceryItems.insert(index, item);
+      });
+    }
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Item deleted.'),
+        duration: Duration(milliseconds: 300),
+      ),
+    );
+    setState(() {
+      _groceryItems.remove(item);
+    });
+  }
+```
+
+Finally we need to handle the situation where there is no data in the firebase. Firebase returns a null string so we need to check that case and show appropriate error message. eg:
+
+```javaScript
+if(response.body == 'null'){
+      setState(() {
+        _isLoading = false;
+      });
+      return;
+    }
+```
+
+Apart from checking for http `statusCode`, there are also scenarios where dart throws an error in situations like no internet connection or error when connecting to the api. We can throw an error to handle these situations. We can use the `Exception `class constructor to create an exception with the message, and use the `throw `keyword to throw the exception. But when you throw an exception all other code after the throw statement will not be executed.   
+eg:  
+` throw Exception('An error occured');` 
+
+We should use the above statement carefully because it might crash our application.
+
+The `http `package already has built in mechanisms to handle the situations like no internet connection. In such situations it will throw an error object. We can handle it using the` try catch` blocks in dart. We will put the code that will potentially fail inside of the try block. Don't put all your code inside of try block. The catch block catches errors that might be thrown. 
+
+The `FutureBuilder `widget is useful when loading data through http requests and futures. This widget will listen to the future and automatically updates the UI as the future resolves. The future builder widget needs 2 parameters. It need the `future `which we should listen to and a builder which is function which gets executed whenever the future produces the data. The function automatically receives the `context `and a `snapshot `which gives you access to the current state of the future. The `async `function automatically returns a future object. So in our case we can modify our data loading function to return a `Future `of `List `of `GroceryItems` . We can avoid using the `try catch` block also because future builder provides a different and easy way to handle errors. Also we can remove the `setState `because future builder will also handle the state accordingly when data is received from the http response.
+
+It is a bad practice to call the function which returns a future by directly calling the function in place of `future `parameter of the `FutureBuilder `widget, because every time the state changes the function will be executed again. We can avoid this by creating a future object which will receive the data from the method. The data from the method will be assigned when the widget is loaded initially by placing it inside of `initState `method. We should specify the `late `keyword infront of the declaration of this variable because the value cannot be null when we define the future. This will tell dart that there will no values initially for this object but it will have a value before it is used for the first time. The code will look like:
+
+```javaScript
+  late Future<List<GroceryItem>> _loadedItems;
+  String? _error;
+  @override
+  void initState() {
+    super.initState();
+    _loadedItems = _loadItems();
+  }
+```
+
+  
+Inside of the builder method of the future builder widget we should return widgets(multiple) based on the current state of the future. We can access the state by using the `snapshot `object which we gets automatically. We can use the `connectionState `property of `snapshot `object which has a couple of possible values. The `ConnectionState enum `contains the possible values for this. The `ConnectionState.waiting` is the initial state when the request is sent and waiting for the response. This is the loading state. Here we can return the loading spinner. 
+
+To check for errors from the api we can use the `hasError `attribute of `snapshot `object. This will be true if our future has been rejected i.e, an error has been thrown from inside of the code that produces the future. We can throw an exception if there is an error response, which will change the state of the future to be rejected. We can access the error message from the `error `property of the `snapshot `object. 
+
+We need to chain the `.toString()` on it to display it.   
+In other cases where the future is not waiting or rejected i.e we have got the data from http request, we can access the data from the `data `property of the `snapshot `object. We can check weather the data is empty or not. And finally after all the checks we can return the widget which we want to display. Inside of the widget where we want to access the data from the future we can also use the `data `attribute of the `snapshot `object. We should also put `! `to indicate that it will not be empty. The code will look like:
+
+```javaScript
+Scaffold(
+  body: FutureBuilder(
+    future: _loadedItems,
+    builder: (context, snapshot) {
+      if (snapshot.connectionState == ConnectionState.waiting) {
+        return Center(child: CircularProgressIndicator());
+      }
+      if (snapshot.hasError) {
+        return Center(child: Text(snapshot.error.toString()));
+      }
+      if (snapshot.data!.isEmpty) {
+        return const Text('No items added yet.');
+      }
+      return ListView.builder(
+        itemCount: snapshot.data!.length,
+        itemBuilder: (context, index) => Dismissible(
+          key: ValueKey(snapshot.data![index].id),
+          onDismissed: (direction) => _removeItem(snapshot.data![index]),
+          child: ListTile(
+            title: Text(snapshot.data![index].name),
+            leading: Container(
+              color: snapshot.data![index].category.color,
+            ),
+            trailing: Text(snapshot.data![index].quantity.toString()),
+          ),
+        ),
+      );
+    },
+  ),
+);
+```
+
+Now the list will be displayed. But when a new item is added it will not be shown, we will have to restart the app to see the newly added item. Also when we delete an item we will get an error. This is because once the builder method is executed only once. Even if we use `setState `it will simply recreate the future builder and not the future. Due to this the UI never updates. So due to this for this app the `FutureBuilder `is not ideal. **If you have a screen or widget where you only need to load data show different states weather you are downloading or not, and you don't have any other logic related to the data future builder might be ideal**. 
