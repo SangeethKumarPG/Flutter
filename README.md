@@ -3323,3 +3323,334 @@ Scaffold(
 ```
 
 Now the list will be displayed. But when a new item is added it will not be shown, we will have to restart the app to see the newly added item. Also when we delete an item we will get an error. This is because once the builder method is executed only once. Even if we use `setState `it will simply recreate the future builder and not the future. Due to this the UI never updates. So due to this for this app the `FutureBuilder `is not ideal. **If you have a screen or widget where you only need to load data show different states weather you are downloading or not, and you don't have any other logic related to the data future builder might be ideal**. 
+
+There is no built in widget that could open the camera and take an image. We will have to create a widget on our own. We need to create a widget that could open the camera, take an image and show the preview of the captured image. We should also pass the image to the screen where we add the data. We need to create a `StatefulWidget `for this. The skeleton of the functionality will look like:  
+
+```javaScript
+Container(
+      height: 250,
+      width: double.infinity,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        border: Border.all(
+          width: 1,
+          color: Theme.of(
+            context,
+          ).colorScheme.primary.withAlpha((255 * 0.2).toInt()),
+        ),
+      ),
+      child: TextButton.icon(
+        onPressed: () {},
+        icon: const Icon(Icons.camera),
+        label: Text('Take Picture'),
+      ),
+    );
+```
+
+`image_picker `is a library in flutter which you can use for adding an image picker to your app. Image picker package provide options for choosing the camera or an existing image. For libraries that utilize native device features we have to implement some extra configuration and setup to make sure that they work. The command to install image picker is:  
+`flutter pub add image_picker`   
+For android we don't need extra configuration for `image_picker`. You should check pub dev documentation for the libraries to know more about these configuration.
+
+To use this we need to first import the `image_picker.dart` file from `image_picker `package. Then we need to instantiate an object of the `ImagePicker `class. On this object we will get various methods for picking images, picking videos and pick multiple images. Here we need `pickImage `method to pick a single image. It requires a source parameter which requires an `ImageSource `value. We can use the `ImageSource `enum value, it has values `camera `and `gallery`. We can use the `ImageSource.camera` since the user must click an image. Additionally we can also set the image `maxWidth`, `maxHeight `and image quality as parameters to the `pickImage `method. If we pass the max width and height values the captured image will be scaled down. The `pickImage `method will return a future of type `XFile`. It is a file that contains the image. We can either mark the function as `async `or call the .then method on `pickImage `to get a hold of the image.
+
+The `XFile `is an optional return as you can see from the docstring because the user might open the camera and choose not to select an image.   
+After capturing the image we need to show the preview in the screen. For this we can create a variable of `File `type to store the image. The `File `class is available in the io module of dart. We can import it like:
+
+```javaScript
+import 'dart:io';
+```
+
+The picked image of type `XFile `but we are storing that value in a variable of type `File`. We can easily convert this using the `File `constructor to which we pass the path of the `XFile `object. We can access the path by using the `.path` parameter of the `XFile `object. The captured image will placed inside of the device memory we are accessing that path and providing it to the constructor to create an object.   
+We can display an image from file by using the `Image.file()` constructor. The code will look like:
+
+```javaScript
+File? _selectedImage;
+  void _takePicture() async {
+    final imagePicker = ImagePicker();
+    final pickedImage = await imagePicker.pickImage(
+      source: ImageSource.camera,
+      maxWidth: 600,
+    );
+    if (pickedImage == null) {
+      return;
+    }
+    setState(() {
+      _selectedImage = File(pickedImage.path);
+    });
+  }
+....
+    Widget content = GestureDetector(
+      onTap: _takePicture,
+      child: TextButton.icon(
+        onPressed: _takePicture,
+        icon: const Icon(Icons.camera),
+        label: Text('Take Picture'),
+      ),
+    );
+    if (_selectedImage != null) {
+            content = Image.file(_selectedImage!, fit: BoxFit.cover, width: double.infinity, height: double.infinity);
+    }
+```
+
+  
+The next step is to save the image. We can create a function in the add places screen which saves the image. We can pass this function as argument to the `InputImage `widget. The code will look like:
+
+```javaScript
+  const ImageInput({super.key, required this.onPickImage});
+  final void Function(File image) onPickImage;
+......
+widget.onPickImage(_selectedImage!);
+// in the parent widget
+ImageInput(onPickImage: (image){
+              _selectedImage = image;
+            },),
+```
+
+  
+To display the preview of the image in the list we can use the leading parameter of the `ListTile`. We can set that to `CircleAvatar`. We can set the `backgroundImage `property to set the image. This requires a Image, since we have a file we can use the `FileImage `to set the image. The code will look like:
+
+```javaScript
+          leading: CircleAvatar(radius: 26, backgroundImage: FileImage(places[index].image),),
+```
+
+The location package is used to access the location from the users device in flutter. We can find this package in pub dev. We can install it using  
+`flutter pub add location` 
+
+This package works in android without extra configuration but if you need your app to run in background you will need to manually setup the permission in the android manifest file.   
+After installing the package we need to create a widget that helps to get the user's location in add place screen. To get the location first we need to import the `location.dart` file from location package.
+
+```javaScript
+import 'package:location/location.dart';
+```
+
+We can refer the documentation to get the code to access the location and use it inside of an async function. The code will look like:
+
+```javaScript
+  void _getCurrentLocation() async {
+    Location location = Location();
+ 
+    bool serviceEnabled;
+    PermissionStatus permissionGranted;
+    LocationData locationData;
+ 
+    serviceEnabled = await location.serviceEnabled();
+    if (!serviceEnabled) {
+      serviceEnabled = await location.requestService();
+      if (!serviceEnabled) {
+        return;
+      }
+    }
+ 
+    permissionGranted = await location.hasPermission();
+    if (permissionGranted == PermissionStatus.denied) {
+      permissionGranted = await location.requestPermission();
+      if (permissionGranted != PermissionStatus.granted) {
+        return;
+      }
+    }
+ 
+    locationData = await location.getLocation();
+  }
+```
+
+The `locationData `object is what we want. It has a couple of properties, what we are interested in is the `latitude `and `longitude`. 
+
+This is what we will use to get the human readable address as well as put the pin on the map. Getting the user's location can take a while. So preferably we should show a loading screen.
+
+To show the location on map we can use the google maps api. For this we need to go to google maps platform web page and sign in with google account. Set up the billing and create a key which you can use for the api. After this we need to select the GeoCoding API and maps sdk for android. We will need to use the API key to use the maps feature in flutter app.
+
+The geocoding api can be used to translate the latitude and longitude into a human readable address. We need to send an http request to this api. For that we need to install http package in our project. We can create a Uri object and pass that the latitude and longitude with the url along with the api key. We can find the url from the documentation. As we inspect the documentation of the api, we will have the `formatted_address `field which we want here. The code will look like:
+
+```javaScript
+    locationData = await location.getLocation();
+    final lat = locationData.latitude;
+    final lng = locationData.longitude;
+    final uri = Uri.parse('https://maps.googleapis.com/maps/api/geocode/json?latlng=$lat,$lng&key=xxxxxxxxxxxxxxxxxxxxx')
+    final response = await http.get(uri);
+    final responseData = json.decode(response.body);
+    final address = responseData['results'][0]['formatted_address'];
+```
+
+To show the location preview we need to use google maps static api. This can be used to create a snapshot of a location of the app. We will get the image on the fly when we access this url.
+
+To display a google maps based map we can use the `google_maps_flutter `package. For this to work we need to enable google maps sdk in the google developer console. We can install the package using:
+
+`flutter pub add google_maps_flutter` 
+
+Since this package is used to enable native device features we need to perform additional configurations for the app. For android we need to specify the api key inside of` manifest.xml` file:
+
+`<meta-data android:name="com.google.android.geo.API_KEY" android:value="YOUR KEY HERE"/>` directly below the application tag.
+
+To use the location in the app we need to first import the `google_maps_flutter.dart` file from `google_maps_flutter `package. After adding this import we can add the `GoogleMap `widget to render a map. This map can be configured. The `initialCameraPosition` parameter can be used to set where the map should be centered. It requires a `CameraPosition `object which can be created using it's constructor which is in google maps package. It requires a target parameter which requires a `LatLng `object which can be created using the constructor which accepts the latitude and longitude. We can also set the zoom level using `zoom `parameter which requires an integer value.  
+  
+The `markers `parameter of the `GoogleMaps `widgets allows you create a set of markers on the map. We can create a set using `{} ` like map, unlike map there is no key, it is just a collection of values separated by , . Sets doesn't allow duplicate values. If you try to add a duplicate value to the set it will not be added. 
+
+The `marker `parameter requires a set of `Marker `objects. We can create marker objects by it's constructor provided in google maps package. This constructor requires a `markerId `which can be created using it's own constructor in google maps package. We must pass a unique value to this as a string. For our scenario we have only 1 marker so we can give any string we want. It also requires a `position `where the marker should be placed. The position can be set using the `LatLng()` constructor. The complete code for showing the map will look like:
+
+```javaScript
+class MapScreen extends StatefulWidget {
+  const MapScreen({
+    super.key,
+    this.location = const PlaceLocation(
+      latitude: 37.422,
+      longitude: -122.084,
+      address: '',
+    ),
+    this.isSelecting = true,
+  });
+  final PlaceLocation location;
+  final bool isSelecting;
+  @override
+  State<StatefulWidget> createState() {
+    return _MapScreenState();
+  }
+}
+```
+
+```javaScript
+class _MapScreenState extends State<MapScreen> {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.isSelecting ? 'Pick Your Location' : 'Your Location'),
+        actions: [
+          if (widget.isSelecting)
+            IconButton(icon: const Icon(Icons.save), onPressed: () {}),
+        ],
+      ),
+      body: GoogleMap(
+        initialCameraPosition: CameraPosition(
+          target: LatLng(widget.location.latitude, widget.location.longitude),
+          zoom: 16,
+        ),
+        markers: {
+          Marker(
+            markerId: const MarkerId('m1'),
+            position: LatLng(widget.location.latitude, widget.location.longitude),
+          ),
+        },
+      ),
+    );
+  }
+}
+```
+
+We can listen to taps on the map for selecting a position in the map. The `onTap `parameter of the `GoogleMap` which can be set to a function which automatically receives the `position `as argument. We can then call the `setState `to update the marker on the map.   
+In dart we can use the special ?? syntax to check if the value is null and use that value otherwise use the value after ??. For example:
+
+```javaScript
+position:  _pickedLocation ??  LatLng(
+              widget.location.latitude,
+              widget.location.longitude,
+            ),
+```
+
+is the same as
+
+```javaScript
+ position: _pickedLocation!=null ? _pickedLocation! : LatLng(
+              widget.location.latitude,
+              widget.location.longitude,
+            ),
+```
+
+  
+To store the data locally we need to install a couple of packages. The `path_provider `package provides easy access to the path where we should store the image so that the images are not deleted from the device by the OS. The command is:  
+` flutter pub add path_provider` 
+
+Additionally we have to install the `path` package which simplifies the process of working with file paths. Because we need to construct paths manually and this package makes that process easier. The command is:  
+`flutter pub add path`  
+Additionally we need to install the `SQFLite `package for sqlite. It helps in storing the data on device using SQL commands. It creates an on device database where the data is stored in tables. Alternatively we can use the `shared_preferences `package which is comparatively more basic than sqflite. With shared preferences we use simple key, value pairs to store the data where as in sqflite we will get the complete table structure. The command is:  
+`flutter pub add sqflite` 
+
+Different operating systems uses different paths for storing the data. We can use the path\_provider package to get the directory where the data is stored. For this first we need to import the `path_provider.dart` file from `path_provider `package with an alias called `syspaths`. The alias makes it easier to access the functionalities and avoids name space coalitions. We can use the `getApplicationDocumentsDirectory() `method of this package to get the application directory where the files are stored. This method returns a future object so we must use async await.  
+We can copy the file(image file) to another location by using the `.copy() `method of the file object.  
+The copy method requires the target location as a string.   
+We can use the path package to get the file name of the file which we stored. For this we need to import `path.dart` file from `path` package and import it with an alias called `path` . We can then use the basename() method of the path package to get the name. 
+
+We need to send the file object's path as argument to this method. We can dynamically construct a path with the app directory and the filename we got. We can then save this path in our application to make the image files persists.
+
+```javaScript
+
+```
+
+```javaScript
+
+```
+
+The above function in the provider class handles the storage of the images.
+
+The next step is to store the meta data into our sql database. To utilize the functionalities of the database we need to import the `sqflite.dart` file and `sqlite_api.dart` file from `sqflite` package. 
+
+```javaScript
+import 'package:sqflite/sqflite.dart' as sql;
+import 'package:sqflite/sqlite_api.dart';
+```
+
+After this we can utilize the functionalities using the sql alias. The `getDatabasesPath() `method returns a future that will eventually give the path of the database on the device. After we got the path we need to open the database using the `openDatabase()` method of the sqflite package. This requires a path as parameter which can be created with the help of `path `package. The path package has a `.join` method to create a path. We already have the database path with us we can join it with the database name we already have or we want to create. We can give any filename as string which must end in `.db` . If the file doesn't exist it will create a new one. eg:  
+
+The `openDatabase `method also takes in a couple of other parameters, we can use the `onCreate `parameter which takes in a function as a value. This function will be executed when the database is created for the first time. This function is used to perform some initial setup work. The function automatically gets the database and version objects as arguments. Inside of this function we should return a future. This future is the result of executing a database query. We can use the `execute `method of the database object to execute a sql query. The query can be passed as string. We can use the create sql command to create the table. Additionally we must also specify the `version `parameter of the `openDatabase` method. We must increment this version if the structure of the database is changed in order to create a new database. The `openDatabase `method returns a future which will have the database object. We can call various methods on this object to perform various sql operations.
+
+We can use the `insert `method of the database object to insert the data. It requires a table name as string and the values as a map where the keys are the column names of the table and the values are the values which we want to insert into the column of the table. The code will now look like:
+
+  
+```javaScript
+
+```
+
+We must also get the data from the database when the app is initially loaded. We can create a new method in the provider for this. Inside the provider we are using the same database object multiple times so we can place it into a global function like:  
+
+```javaScript
+
+```
+
+We can use it by calling like:
+
+```javaScript
+
+```
+
+We can use the `query()` method on the database object to query a table. It requires the table name as string. We can also filter the data by using the where parameter and specifying the conditions.
+
+From the query result we will get a list of maps, we need to convert it into the object we need to be displayed on the screen. For this list we can use `map()` method to iterate over the query result and in our case we need a Place object. Inside of the list the map contains each column name as key and the column value as value. We also need to cast it to the particular type using the `as `keyword. The data loading method will look like:  
+
+```javaScript
+  void loadPlace() async {
+    final db = await _getDatabase();
+    final data = await db.query('user_places');
+    final places = data.map(
+      (row) => Place(
+        id: row['id'] as String,
+        title: row['title'] as String,
+        image: File(row['image'] as String),
+        location: PlaceLocation(
+          latitude: row['lat'] as double,
+          longitude: row['lng'] as double,
+          address: row['address'] as String,
+        ),
+      ),
+    ).toList();
+    state = places;
+  }
+```
+
+We can use the `FutureBuilder `widget to load the data from the database initially and display it on screen. The code will look like:  
+
+```javaScript
+class _PlacesScreenState extends ConsumerState<PlacesScreen> {
+  late Future<void> _placesFuture;
+  @override
+  void initState() {
+    super.initState();
+    _placesFuture = ref.read(userPlacesProvider.notifier).loadPlace();
+  }
+......
+child: FutureBuilder(
+          future: _placesFuture,
+          builder: (context, snapshot) =>
+              snapshot.connectionState == ConnectionState.waiting
+              ? Center(child: CircularProgressIndicator())
+              : PlacesList(places: userPlaces),
+        ),
+```
