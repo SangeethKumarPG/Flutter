@@ -3654,3 +3654,340 @@ child: FutureBuilder(
               : PlacesList(places: userPlaces),
         ),
 ```
+
+Firebase not only provides real time database but also supports user authentication, storage and validation of credentials. For setting this up we must login to firebase and create a new project. After creating the project go to the build section on the sidebar there you can see authentication. Inside this we can enable authentication with firebase. Inside this we can click on the get started option. We can choose the email and password option here but firebase also supports various other types of authentication like google, facebook, app etc. Then on the next screen enable email and password option. After this we need to setup the authentication screen. For this we can use the form which we already know. We need to create 2 text fields which can be used to enter the email address and password. For the email input field we can disable the auto correction by setting the `autoCorrect `parameter to false.
+
+ Also we can disable the capitalization by setting the `textCapitalization `parameter to `TextCapitalization.none`. For password column we can set the `obscureText `parameter to `true `to make the normal text field to a password input field. 
+
+After creating the login page we can send the credentials to firebase. We can do this using the firebase rest api. We can use the firebase SDK to create and send those http requests without manually creating and calling those api's. An SDK is a collection of codes that you can use in your code to simplify the process of using a functionality. In case of firebase it helps in simplifying the communication between the firebase services. 
+
+To use the sdk we need to first install the firebase CLI. We can use npm to install it using the following command:
+
+```javaScript
+npm install -g firebase-tools
+```
+
+Once the installation is completed we can use the `firebase `command to see if there is an error, if there is no error and you see a long text of options you have successfully installed firebase cli. After this we need to run `firebase login` command which will open a browser window and let's you choose the google account. After successfully logging in you can install the flutterfire cli.
+
+It is another tool provided by firebase which is specifically used for managing flutter projects with firebase. The command is :
+
+```javaScript
+dart pub global activate flutterfire_cli
+```
+
+You only need to do this once for your system, there after we will be able use firebase cli in any flutter project. Once this is done we can navigate to the project directory and run   
+`flutterfire configure`   
+This might show that the command is not found, when you run the above command again you might see the reason for the error like:
+
+```javaScript
+
+```
+
+You need to go to the environment variables > user variables > click on the Path and add the new path. After this restart your terminal. Then you can run the configure command. Then this let's us walk through the setup of this project. 
+
+In the setup screen you can see the project you created, choose that and it will ask you for the configuration of platforms, Choose the required options. It will adjust the configurations for the flutter project as well as the firebase project. After this we need to add the features which we want to use. We can use the flutter `pub add command` to install the required packages. We must use:
+
+```javaScript
+
+```
+
+After this to enable authentication we need to install `firebase_auth `package. The code is like:
+
+```javaScript
+
+```
+
+After doing this again run the `flutterfire configure` command which is recommended in the documentaion. After this we should add the following imports in the main.dart file.
+
+```javaScript
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+```
+
+After this we need to add 
+
+```javaScript
+WidgetsFlutterBinding.ensureInitialized();
+await Firebase.initializeApp(
+  options: DefaultFirebaseOptions.currentPlatform,
+);
+```
+
+Inside of the main function of the main.dart.
+
+Make sure that main function is marked as `async`. You can see that the `firebase_options.dart` file was added automatically by the flutterfire cli. After this rerun the application, this might take some time. 
+
+After this setup we can start with the signup functionality. We can use the firebase\_auth package by importing the `firebase_auth.dart` file from `firebase_auth `package. Then we can add a global variable which has the value of `FirebaseAuth.instance` which is an object managed by the firebase cli. We can then use this variable to access various methods offered by the firebase. We can use the `createUserWithEmalAndPassword()` to create a new user with the specified email and password. Behind the scenes it is sending an http request. For this to work we must ensure that email and password authentication is enabled in the firebase console. The method will return a future which will resolve a `UserCredential `value. It may throw an exception if you already have the user with that email address, or the email address is invalid, or the password is too short. We can use a slight variation of try catch with the `on `keyword before the catch to catch specific exceptions. 
+
+When you are using on only the specified exceptions will be handled. eg:  
+
+```javaScript
+
+```
+
+We can test the signup functionality and verify the user is present in the firebase console or not.
+
+The next step is to implement the login functionality. We should validate the collected credentials to make sure that we have a valid email password combination. After validation we might need to show the user a different screen or show them protected resources to only logged in users. Once we validated the user data the backend will generate an authentication token(it also creates a new token when a new user is created). Authentication token is a sequence of random looking characters created using a certain algorithm which does not make it random. These characters can only be reproduced by the backend. The generated token is sent to the frontend, frontend will send this token along with the requests for accessing protected resources. Only the backend can verify the token and authenticate the user for the resource. The token will be generated and managed by the firebase sdk. The entire life cycle of the token will be managed by the sdk.
+
+We can use the `signInWithEmailAndPassword `method of the global firebase object we created to sign in. It has parameters `email` and `password`. This will also return a future and may throw an exception if an invalid email or password is provided. eg;
+
+```javaScript
+try {
+      if (_isLogin) {
+        final userCredentials = await _firebase.signInWithEmailAndPassword(
+          email: _enteredEmail,
+          password: _enteredPassword,
+        );
+        print(userCredentials);
+      } else {
+        final userCredentials = await _firebase.createUserWithEmailAndPassword(
+          email: _enteredEmail,
+          password: _enteredPassword,
+        );
+        print(userCredentials);
+      }
+    } on FirebaseAuthException catch (error) {
+      if (error.code == 'email-already-in-use') {
+        //..
+      }
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message ?? 'Authentication failed')),
+      );
+    }
+```
+
+We can check the existence of an authentication token to see if the user is authenticated and then navigate him to a different screen. The token will be stored on the device and it will be managed by the firebase. Due to this we can make the user navigate to the required screen if he had logged in before. We can do a check in the main.dart file to show which page should be shown.   
+Flutter has a `StreamBuilder ` widget which is similar to the `FutureBuilder `widget, which we used to display the content based on the state of the future. The difference between `FutureBuilder `and `StreamBuilder `is that the `FutureBuilder `end once the future is resolved i.e it will only produce one value or error, whereas stream builder can produce multiple values overtime. `StreamBuilder `requires a `stream `and a `builder `function as arguments. The builder function receives the `context `and `snapshot `as parameters automatically. 
+
+This function will be automatically called whenever the stream is connected will emit a new value, and `snapshot `will give access to that value. The stream which we want to connect is obtained from the `authStateChanges()` method of the `FirebaseAuth.instance  
+`This method will return a stream. Firebase sdk controls this and whenever anything related to the auth changes it will emit a new value. Like when a token is available, or token is removed. We can check if the snapshot has data then we can navigate to the chat screen, which means we have a logged in user. Firebase will not emit a value if there is no token. The code will look like:  
+
+```javaScript
+
+```
+
+After adding this logic we will be automatically redirected to the chat screen, because the token was automatically picked up. We will still remain on the chat screen page even if we restart the emulator, because the token is managed inside of the device and loaded by the firebase sdk automatically. But we might see the auth screen for a fraction of seconds in some devices. This happens when firebase take some more time to load the token. we can show a splash screen during this to show a nice animation. 
+
+Then in the main.dart file we can check the `connectionState `of the `snapshot` like we did for the future builder, to check weather we are still waiting for a value. The code will look like:
+
+  
+```javaScript
+StreamBuilder(stream: FirebaseAuth.instance.authStateChanges(), builder: (ctx, snapshot){
+        if(snapshot.connectionState == ConnectionState.waiting){
+          return SplashScreen();
+        }
+        if(snapshot.hasData){
+          return const ChatScreen();
+        }
+        return AuthScreen();
+      })
+```
+
+To logout from the application inside of the appbar we can create an action button. in the `onPressed `method we can call the `signOut()` method on the` FirebaseAuth.instance` object. That is all we have to do. Because once the token is removed the `StreamBuilder `will automatically show the Login screen. The code will be like:
+
+```javaScript
+        actions: [
+          IconButton(onPressed: (){
+            FirebaseAuth.instance.signOut();
+          }, icon: Icon(Icons.exit_to_app, color: Theme.of(context).colorScheme.primary,)),
+        ],
+```
+
+Firebase also supports the storage of files. To enable this on the left sidebar under build we have storage option. Once you click on it we will be asked to upgrade our plan. After setting up the billing you will be asked to setup mode of firebase bucket storage, we can choose production which makes it private by default. To access the content we need to setup security rules. Once the bucket is created we can click on the rules tab to setup the rules. Security rules defines who will be able to upload the files and who will be able to upload those files. We need to make all the authenticated users upload and view files.   
+rules\_version = '2';
+
+```javaScript
+
+```
+
+We changed it such that 
+
+```javaScript
+
+```
+
+After this we need to publish the rule. After this we need to install the `firebase_storage `package. The command is:  
+`flutter pub add firebase_storage` 
+
+this is part of firebase sdk which allows to send files to firebase. We also need to install the `image_picker `package so that we can take photos.
+
+We can create a new stateful widget to get show the image picker and show the preview after capturing the image. 
+
+After obtaining the image we need to upload the image. We cannot create a user and upload the image in a single step. We first need to create a user and the add extra data to that user. We need to import `firebase_storage.dart` file from `firebase_storage `package. After importing this we can access `FirebaseStorage.instance` object upon which we can the `ref()` method. On this we can call the `child()` method to create a path inside of the bucket. The `path `is passed as a string which indicates the folder name. On this we should again chain the `child()` method to create a file inside of the folder. The filename is generated dynamically from the `userCredentials `object. The `userCredentials `object has the user attribute which will be present if the user is created successfully. Inside of this we will have the `uid `which is generated by the firebase which is unique for each user. We can assign this path reference to an object. On this object we can call the `putFile()` method to upload the file.
+
+The `putFile()` requires a file object which we already have. This method returns an `UploadTask` which we can await. After this we can use the same storageReference object to get the download url for the image by calling `getDownloadURL `method, it will return a future string which will be the download url. The code will look like:  
+
+```javaScript
+
+```
+
+After obtaining the url of the image file we need to store it to the database so that we can show it along with the chat message. If we need to store additional data we need to use either the realtime database service or the firestore database. We can go to the build section of the leftside bar to access the firestore database option. Choose the standard version in native mode, choose the production mode which blocks all access. This will setup the firestore. After the store is created we can go to the security tab and make sure that authenticated users can read and write to this database. We can do this in a similar way we did for the storage service of firebase. The code will look like:
+
+```javaScript
+
+```
+
+In real world usage you should modify the rules such that one authenticated user cannot access the data of other user.
+
+We can use the `cloud_firestore `package to store and retrieve the data from `firestore `database. The command to install it is:
+
+```javaScript
+
+```
+
+Alternatively we can use http requests and the rest api provided by firebase which is cumbersome.  
+
+To use this we need to first import the `cloud_firestore.dart` file from `cloud_firestore `package. We can then use `FirebaseFirestore.instance` object. The firestore works with collections which can be thought of as folder containing data. on this instance we can call the `collection()` method. We should pass the collection name as string argument. If the collection doesn't exist it will create a new collection. Collections contains documents which are the actual data entries. Document can also have more nested collections if you needed to. We can create a new document under the collection by chaining the `.doc()` method to this. We can construct the document name like we did for the file name previously. After this we can specify the data that needs to be stored in this document. We can chain the `set()` method to set the data. This requires a Map object where the keys are the keys of the database and values are the values of those keys in the database. This methods returns a future.
+
+The code will now look like:
+
+```javaScript
+
+```
+
+  
+If there is any issue with storing the data, you can delete the firestore database and create a new instance again. Now we can add a new form field to enter the username.
+
+The next step is to create the chat screen. We can create separate widgets for messages and new messages. The `textCapitalization `parameter of the TextField widget allows automatic capitalization of characters. We can set it to `TextCapitalization.sentences` which automatcally capitalizes the first letters of the sentence.
+
+After obtaining the text from the text field we need to send it to firebase. We can use the `cloud_firestore.dart` file from `cloud_firestore `package to access the `FirebaseFirestore.instance` object which we can use to access and manipulate the data in firestore. We can use the same approach to save the message data. We can call the `add()` method on the collection which will automatically assign a unique document name. We can directly pass the map object to this. From the `FirebaseAuth.instance` we can easily access the information of the currently logged in user. But we cannot access the user's image and username because we have stored those in firestore. We need to first access them. We can access them similar to the way we created them, but at the end we need to chain the `get() `method which will send a http get request behind the scenes. This will return a future which contains a document snapshot, from which we need to extract the required data.
+
+We can call the `data()` method on the received object and access the necessary fields using `[]`. After entering the message and sending it we should automatically close the keyboard. We can use the `FocusScope `object provided by flutter on context and call the `unfocus()` method. The complete function will look like:  
+
+```javaScript
+void submitMessage() async {
+    final enteredMessage = _messageController.text;
+    if (enteredMessage.trim().isEmpty) {
+      return;
+    }
+    FocusScope.of(context).unfocus();
+    _messageController.clear();
+ 
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return;
+    final userData = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(currentUser.uid)
+        .get();
+    if (!userData.exists || userData.data() == null) {
+      print('userdata not found');
+      return;
+    }
+    //send to firebase
+    await FirebaseFirestore.instance.collection('chat').add({
+      'text': enteredMessage,
+      'createdAt': Timestamp.now(),
+      'userId': currentUser.uid,
+      'username': userData.data()!['username'],
+      'userImage': userData.data()!['image_url'],
+    });
+  }
+```
+
+The next step is to display the chat messages. In the chat messages screen we can use the `StreamBuilder `widget to listen to a stream of messages and whenever a new message is submitted it is automatically loaded and displayed. To access our stream of messages we can use the `FirebaseFirestore.instance` object upon which we can chain the `collection `method to get the collection we want. We can then chain the `snapshots() `method which will provide a stream. This will setup a listener which will listen to the remote firestore databases collection. Whenever a new document is added, it will notify to the firebase package and will automatically trigger the builder function. The builder method will automatically get the `context `and the `snapshot `as argument. The `snapshot `will have data that was loaded from the backend. We can also check the connection state here to show the loading screen when the data is being loaded.
+
+The messages will be stored in `docs `attribute of the `data `attribute of the `snapshot `object. To access the individual messages we can use the `data()` method to get the underlying collection and access the particular key in which the message is stored. We can also use the `orderBy() `method to sort the data according to a particular field. The first parameter of this method is the column name and the second argument is `ascending/descending` which is set using the boolean value. The following skeleton code will show you how you can do that:
+
+```javaScript
+return StreamBuilder(stream: FirebaseFirestore.instance.collection('chat').orderBy('createdAt', descending: true).snapshots(), builder: (ctx, chatSnapshots){
+      if(chatSnapshots.connectionState == ConnectionState.waiting){
+        return const Center(child: CircularProgressIndicator());
+      }
+      if(!chatSnapshots.hasData || chatSnapshots.data!.docs.isEmpty){
+        return const Center(child: Text('No messages found'),);
+      }
+      if(chatSnapshots.hasError){
+        return const Center(child: Text('Something went wrong...'),);
+      }
+      final loadedMessages = chatSnapshots.data!.docs;
+      return ListView.builder(itemCount: loadedMessages.length, itemBuilder: (ctx, index){
+        return Text(loadedMessages[index].data()['text']);
+      });
+    });
+```
+
+We can use the `padding `parameter for the `ListView.builder` also. We can use the `reverse `parameter to `true `for pushing the items of the list to the bottom of the screen instead of displaying it at the top.
+
+The next thing we need to implement is push notifications. Whenever a new message arrives and if the app is not opened the other users should receive the notification and they should be able to open the app from the notification. This can be easily implemented with firebase. In firebase console on the left sidebar under run there is messaging option. This service can be used to send push notification to both ios and android. The official documentation provide steps to implement this. In ios there are some extra steps we need to do to enable this feature. It also requires a physical device for testing. For android it is much easier and we can test it in the emulator. For android we don't need any extra steps.
+
+To enable messaging we can install the firebase\_messaging package using the command:
+
+```javaScript
+
+```
+
+Then we need to implement the push notification logic. Push notification only matters to the authenticated user so we should implement the logic inside of the screen where the users come after authentication which in our case is the chat screen. We need to ask user for permission and we need to get the address of the device which it is running. Address is important to send push notifications, We must ensure that the widget where we implement the logic is stateful widget. We need to override the `initState `method and do the initialization work there. This is where we ask for permission and get address of the device. We can create all this by using the `FirebaseMessaging `class which is provided by `firebase_messaging.dart` file from the `firebase_messaging `package. On this class we can use the instance object. On this object we can call the `requestPermission `method. It requests the user to accept permission for receiving push notifications. 
+
+**Even if it is a future we should not make the initState function async**. Instead you can use a helper function and make it async. The `requestPermission `method gives the notification settings. Then after this we can use the `getToken()` method on the fcm object to get the device address. You can send this address to the server over http and store it in a database. The token will be string. The code will look like:
+
+```javaScript
+void setupPushNotifications() async {
+    final fcm = FirebaseMessaging.instance;
+    await fcm.requestPermission();
+    final token = await fcm.getToken();
+    print(token);
+  }
+ 
+  @override
+  void initState() {
+    super.initState();
+    setupPushNotifications();
+  }
+```
+
+To configure messaging in firebase console click on create campaign > choose firebase notification messages > Then on the next page we can give the message a title, message text > then click on send test message, here we can paste in the token and the device. After this make sure that the app is in background, then click on test button. Now you will receive the push notification. When you click on the notification the app will open and will be taken to the chat screen. We can do this through the code later.
+
+In our application we don't need to target individual devices we can send the messages through a channel so that all the users who installed and sign up in the app can receive the notification. We can use the `subscribeToTopic()` method where we can enter any topic name of our choice. All the registered devices will get the push notification whenever we send a new notification to the chat topic. The topic name should be passed as string. Then inside of the firebase console we can choose the create campaign option > give the title and message > click on next, here under the target we can choose the topic and provide the topic name we provided in the app > click next > choose now as the time> click next> choose the defaults > click on review button > click on publish. Topics are much slower than targeting individual devices, so it might take some time.
+
+We need to automate the above process. For this we need some code in our backend(not in your flutter app but the remote backend. We cannot do this in our flutter app. If you write your own code for the backend we can utilize the backed firebase sdk for this. We can use the functions options under the build on firebase console. This allows you to add code to your backend that can be triggered and executed upon the occurrence of certain predefined events. For this we need a paid plan. We need to install an npm package for setting this up. The command is:
+
+```javaScript
+
+```
+
+After installing you should run the following commands inside of the flutter project.
+
+```javaScript
+
+```
+
+Here you will be asked to initialize again, press enter, then you need to choose the cloud functions, we should not enable any other because all the other features we are using is through firebase flutter sdk. Next after selecting cloud function choose the existing app option to link your existing project.
+
+Select the firebase project and press enter. This will configure the cloud functions.   
+You will be asked to write the language in which cloud functions are written. Here we can choose javascript. It will prompt to weather user eslint, press no, then it will ask to install the relevant npm packages choose yes. Once the setup is finished you will have a functions folder in your flutter project with some files. What we are interested is the index.js file. The code you write in here will be deployed to firebase and run there as a function. The code will look like:
+
+```javaScript
+const functions = require("firebase-functions/v2/firestore");
+const admin = require("firebase-admin");
+ 
+// When encountering an error after using this code
+// follow the link that should be shown in the error message
+// Enable the registry (on the page after following the link) and try again
+ 
+admin.initializeApp();
+exports.myFunction = functions.onDocumentCreated(
+  "chat/{messageId}",
+  (event) => {
+    const data = event.data.data();
+    return admin.messaging().send({
+      notification: {
+        title: data["username"],
+        body: data["text"],
+      },
+      data: {
+        click_action: "FLUTTER_NOTIFICATION_CLICK",
+      },
+      topic: "chat",
+    });
+  }
+);
+```
+
+After we wrote the code we can use the 
+
+```javaScript
+firebase deploy
+```
+
+command to deploy it to the firebase. 
