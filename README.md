@@ -3572,11 +3572,18 @@ We can use the path package to get the file name of the file which we stored. Fo
 We need to send the file object's path as argument to this method. We can dynamically construct a path with the app directory and the filename we got. We can then save this path in our application to make the image files persists.
 
 ```javaScript
-
+import 'package:path_provider/path_provider.dart' as syspaths;
+import 'package:path/path.dart' as path;  
 ```
 
 ```javaScript
-
+void addPlace(String title, File image, PlaceLocation location) async {
+    final appDir = await syspaths.getApplicationDocumentsDirectory();
+    final fileName = path.basename(image.path);
+    final copiedImage = await image.copy('${appDir.path}/$fileName');
+    final newPlace = Place(title: title, image: copiedImage, location: location);
+    state = [...state, newPlace];
+  }
 ```
 
 The above function in the provider class handles the storage of the images.
@@ -3596,20 +3603,41 @@ We can use the `insert `method of the database object to insert the data. It req
 
   
 ```javaScript
-
+void addPlace(String title, File image, PlaceLocation location) async {
+  final appDir = await syspaths.getApplicationDocumentsDirectory();
+  final fileName = path.basename(image.path);
+  final copiedImage = await image.copy('${appDir.path}/$fileName');
+  final newPlace = Place(title: title, image: copiedImage, location: location);
+  final dbPath = await sql.getDatabasesPath();
+  final db = await sql.openDatabase(path.join(dbPath, 'places.db'), onCreate: (db, version){
+    return db.execute('CREATE TABLE user_places(id TEXT PRIMARY KEY, title TEXT, image TEXT, lat REAL, lng REAL, address TEXT)');
+  }, version:1);
+  db.insert('user_places', {'id':newPlace.id, 'title': newPlace.title, 'image': newPlace.image.path, 'lat': newPlace.location.latitude, 'lng': newPlace.location.longitude, 'address': newPlace.location.address});
+  state = [...state, newPlace];
+}
 ```
 
 We must also get the data from the database when the app is initially loaded. We can create a new method in the provider for this. Inside the provider we are using the same database object multiple times so we can place it into a global function like:  
 
 ```javaScript
-
+Future<Database> _getDatabase() async {
+  final dbPath = await sql.getDatabasesPath();
+  final db = await sql.openDatabase(
+    path.join(dbPath, 'places.db'),
+    onCreate: (db, version) {
+      return db.execute(
+        'CREATE TABLE user_places(id TEXT PRIMARY KEY, title TEXT, image TEXT, lat REAL, lng REAL, address TEXT)',
+      );
+    },
+    version: 1,
+  );
+  return db;
+}
 ```
 
 We can use it by calling like:
 
-```javaScript
-
-```
+` final db = await _getDatabase();`
 
 We can use the `query()` method on the database object to query a table. It requires the table name as string. We can also filter the data by using the where parameter and specifying the conditions.
 
@@ -3680,22 +3708,20 @@ You only need to do this once for your system, there after we will be able use f
 This might show that the command is not found, when you run the above command again you might see the reason for the error like:
 
 ```javaScript
-
+Pub installs executables into C:\Users\name\AppData\Local\Pub\Cache\bin, which is not on your path.
+You can fix that by adding that directory to your system's "Path" environment variable.
+A web search for "configure windows path" will show you how.
 ```
 
 You need to go to the environment variables > user variables > click on the Path and add the new path. After this restart your terminal. Then you can run the configure command. Then this let's us walk through the setup of this project. 
 
 In the setup screen you can see the project you created, choose that and it will ask you for the configuration of platforms, Choose the required options. It will adjust the configurations for the flutter project as well as the firebase project. After this we need to add the features which we want to use. We can use the flutter `pub add command` to install the required packages. We must use:
 
-```javaScript
-
-```
+`flutter pub add firebase_core`
 
 After this to enable authentication we need to install `firebase_auth `package. The code is like:
 
-```javaScript
-
-```
+`flutter pub add firebase_core`
 
 After doing this again run the `flutterfire configure` command which is recommended in the documentaion. After this we should add the following imports in the main.dart file.
 
@@ -3722,7 +3748,20 @@ After this setup we can start with the signup functionality. We can use the fire
 When you are using on only the specified exceptions will be handled. eg:  
 
 ```javaScript
-
+try {
+        final userCredentials = await _firebase.createUserWithEmailAndPassword(
+          email: _enteredEmail,
+          password: _enteredPassword,
+        );
+      } on FirebaseAuthException catch (error) {
+        if (error.code == 'email-already-in-use') {
+          //..
+        }
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.message ?? 'Authentication failed')),
+        );
+      }
 ```
 
 We can test the signup functionality and verify the user is present in the firebase console or not.
@@ -3764,7 +3803,12 @@ This function will be automatically called whenever the stream is connected will
 `This method will return a stream. Firebase sdk controls this and whenever anything related to the auth changes it will emit a new value. Like when a token is available, or token is removed. We can check if the snapshot has data then we can navigate to the chat screen, which means we have a logged in user. Firebase will not emit a value if there is no token. The code will look like:  
 
 ```javaScript
-
+home: StreamBuilder(stream: FirebaseAuth.instance.authStateChanges(), builder: (ctx, snapshot){
+        if(snapshot.hasData){
+          return const ChatScreen();
+        }
+        return AuthScreen();
+      }),
 ```
 
 After adding this logic we will be automatically redirected to the chat screen, because the token was automatically picked up. We will still remain on the chat screen page even if we restart the emulator, because the token is managed inside of the device and loaded by the firebase sdk automatically. But we might see the auth screen for a fraction of seconds in some devices. This happens when firebase take some more time to load the token. we can show a splash screen during this to show a nice animation. 
@@ -3798,14 +3842,21 @@ Firebase also supports the storage of files. To enable this on the left sidebar 
 rules\_version = '2';
 
 ```javaScript
-
+// Craft rules based on data in your Firestore database
+// allow write: if firestore.get(
+//    /databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin;
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
 ```
 
 We changed it such that 
 
-```javaScript
-
-```
+`request.auth != null`
 
 After this we need to publish the rule. After this we need to install the `firebase_storage `package. The command is:  
 `flutter pub add firebase_storage` 
@@ -3819,22 +3870,31 @@ After obtaining the image we need to upload the image. We cannot create a user a
 The `putFile()` requires a file object which we already have. This method returns an `UploadTask` which we can await. After this we can use the same storageReference object to get the download url for the image by calling `getDownloadURL `method, it will return a future string which will be the download url. The code will look like:  
 
 ```javaScript
-
+final storageRef = FirebaseStorage.instance.ref().child('user-images').child('${userCredentials.user!.uid}.jpg');
+        await storageRef.putFile(_selectedImage!);
+        final imageURL = await storageRef.getDownloadURL();
+        print(imageURL);
 ```
 
 After obtaining the url of the image file we need to store it to the database so that we can show it along with the chat message. If we need to store additional data we need to use either the realtime database service or the firestore database. We can go to the build section of the leftside bar to access the firestore database option. Choose the standard version in native mode, choose the production mode which blocks all access. This will setup the firestore. After the store is created we can go to the security tab and make sure that authenticated users can read and write to this database. We can do this in a similar way we did for the storage service of firebase. The code will look like:
 
 ```javaScript
-
+rules_version = '2';
+ 
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
 ```
 
 In real world usage you should modify the rules such that one authenticated user cannot access the data of other user.
 
 We can use the `cloud_firestore `package to store and retrieve the data from `firestore `database. The command to install it is:
 
-```javaScript
-
-```
+`flutter pub add cloud_firestore`
 
 Alternatively we can use http requests and the rest api provided by firebase which is cumbersome.  
 
@@ -3843,10 +3903,13 @@ To use this we need to first import the `cloud_firestore.dart` file from `cloud_
 The code will now look like:
 
 ```javaScript
-
+  await FirebaseFirestore.instance.collection('users').doc(userCredentials.user!.uid).set({
+          'username': 'to be done.',
+          'email':_enteredEmail,
+          'image_url': imageURL
+        });
 ```
 
-  
 If there is any issue with storing the data, you can delete the firestore database and create a new instance again. Now we can add a new form field to enter the username.
 
 The next step is to create the chat screen. We can create separate widgets for messages and new messages. The `textCapitalization `parameter of the TextField widget allows automatic capitalization of characters. We can set it to `TextCapitalization.sentences` which automatcally capitalizes the first letters of the sentence.
@@ -3913,9 +3976,7 @@ The next thing we need to implement is push notifications. Whenever a new messag
 
 To enable messaging we can install the firebase\_messaging package using the command:
 
-```javaScript
-
-```
+`flutter pub add firebase_messaging` 
 
 Then we need to implement the push notification logic. Push notification only matters to the authenticated user so we should implement the logic inside of the screen where the users come after authentication which in our case is the chat screen. We need to ask user for permission and we need to get the address of the device which it is running. Address is important to send push notifications, We must ensure that the widget where we implement the logic is stateful widget. We need to override the `initState `method and do the initialization work there. This is where we ask for permission and get address of the device. We can create all this by using the `FirebaseMessaging `class which is provided by `firebase_messaging.dart` file from the `firebase_messaging `package. On this class we can use the instance object. On this object we can call the `requestPermission `method. It requests the user to accept permission for receiving push notifications. 
 
@@ -3942,15 +4003,11 @@ In our application we don't need to target individual devices we can send the me
 
 We need to automate the above process. For this we need some code in our backend(not in your flutter app but the remote backend. We cannot do this in our flutter app. If you write your own code for the backend we can utilize the backed firebase sdk for this. We can use the functions options under the build on firebase console. This allows you to add code to your backend that can be triggered and executed upon the occurrence of certain predefined events. For this we need a paid plan. We need to install an npm package for setting this up. The command is:
 
-```javaScript
-
-```
+`npm install -g firebase-tools`
 
 After installing you should run the following commands inside of the flutter project.
 
-```javaScript
-
-```
+`firebase init`
 
 Here you will be asked to initialize again, press enter, then you need to choose the cloud functions, we should not enable any other because all the other features we are using is through firebase flutter sdk. Next after selecting cloud function choose the existing app option to link your existing project.
 
